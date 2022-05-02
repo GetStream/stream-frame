@@ -104,7 +104,6 @@ class ReviewProject extends StatefulWidget {
 
 class _ReviewProjectState extends State<ReviewProject> {
   late VideoPlayerController _videoPlayerController1;
-  late VideoPlayerController _videoPlayerController2;
   ChewieController? _chewieController;
   final textController = TextEditingController();
   @override
@@ -117,7 +116,6 @@ class _ReviewProjectState extends State<ReviewProject> {
   @override
   void dispose() {
     _videoPlayerController1.dispose();
-    _videoPlayerController2.dispose();
     _chewieController?.dispose();
     super.dispose();
   }
@@ -215,7 +213,7 @@ class _ReviewProjectState extends State<ReviewProject> {
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 16),
           child: Text("${widget.reactionCounts} Comments"),
-        ), //TODO: replace with number for comments from feeds
+        ),
         CommentListView(
           activity: widget.activity,
           chewieController: _chewieController,
@@ -381,7 +379,7 @@ class FrameComment extends StatelessWidget {
           child: Row(
             mainAxisAlignment: MainAxisAlignment.start,
             children: [
-              FrameAvatar(url: avatarUrl), //TODO: replace with actual avatar
+              FrameAvatar(url: avatarUrl),
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 8.0),
                 child: Text(
@@ -477,7 +475,7 @@ class FrameAvatar extends StatelessWidget {
   Widget build(BuildContext context) {
     return CircleAvatar(
         backgroundImage: NetworkImage(
-          url, //TODO: avatarUrl from stream
+          url,
         ),
         radius: 18);
   }
