@@ -1,16 +1,16 @@
 import 'package:chewie/chewie.dart';
 import 'package:flutter/material.dart';
+import 'package:stream_feed_flutter_core/stream_feed_flutter_core.dart';
 import 'package:timeago/timeago.dart' as timeago;
 
 // ignore: depend_on_referenced_packages
 import 'package:video_player/video_player.dart';
 
 class StreamFrame extends StatefulWidget {
-  const StreamFrame({
-    Key? key,
-    this.title = 'Chewie Demo',
-  }) : super(key: key);
-
+  const StreamFrame(
+      {Key? key, this.title = 'Chewie Demo', required this.client})
+      : super(key: key);
+  final StreamFeedClient client;
   final String title;
 
   @override
@@ -21,10 +21,92 @@ class StreamFrame extends StatefulWidget {
 
 class _StreamFrameState extends State<StreamFrame> {
   TargetPlatform? _platform;
+
+  @override
+  Widget build(BuildContext context) {
+    return MaterialApp(
+      builder: (context, child) => FeedProvider(
+        bloc: FeedBloc(
+          client: widget.client,
+        ),
+        child: child!,
+      ),
+      title: widget.title,
+      theme: AppTheme.light.copyWith(
+        platform: _platform ?? Theme.of(context).platform,
+      ),
+      home: Scaffold(
+        appBar: AppBar(
+          title: Text(
+            "Stream Frame",
+          ),
+        ),
+        body: FlatFeedCore(
+          feedGroup: 'user',
+          userId: FeedProvider.of(context).bloc.currentUser!.id,
+          loadingBuilder: (context) => const Center(
+            child: CircularProgressIndicator(),
+          ),
+          emptyBuilder: (context) =>
+              const Center(child: Text('No video to review')),
+          errorBuilder: (context, error) => Center(
+            child: Text(error.toString()),
+          ),
+          limit: 10,
+          flags: EnrichmentFlags()
+            ..withReactionCounts()
+            ..withOwnReactions(),
+          feedBuilder: (context, activities) => ListView.builder(
+              //TODO: add a step in between (PreviewProject(commentNumber,preview?)) that Navigator.push to ReviewProject
+              itemBuilder: (context, index) => ReviewProject(
+                  activity: activities[index],
+                  reactionCounts:
+                      activities[index].reactionCounts?["comment"] as int?,
+                  videoUrl: activities[index].extraData!['video_url'] as String,
+                  projectName: activities[index].extraData!["project_name"]
+                      as String, // "streamagram.mov",
+                  authorName: activities[index].actor!.data!["full_name"]
+                      as String, //"Gordon Hayes",
+                  description: activities[index].extraData!["description"]
+                      as String, // "this is a descrption",
+                  publishedDate: DateTime(2022, 05, 02))),
+        ),
+      ),
+    );
+  }
+}
+
+String formatPublishedDate(DateTime publishedDate) =>
+    timeago.format(publishedDate);
+
+class ReviewProject extends StatefulWidget {
+  const ReviewProject({
+    Key? key,
+    required this.projectName,
+    required this.authorName,
+    required this.publishedDate,
+    required this.description,
+    required this.videoUrl,
+    required this.activity,
+    this.reactionCounts = 0,
+  }) : super(key: key);
+  final EnrichedActivity activity;
+  final int? reactionCounts;
+  final String projectName;
+  final String authorName;
+  final DateTime publishedDate;
+  final String description;
+  final String videoUrl;
+
+  @override
+  State<ReviewProject> createState() => _ReviewProjectState();
+}
+
+class _ReviewProjectState extends State<ReviewProject> {
   late VideoPlayerController _videoPlayerController1;
   late VideoPlayerController _videoPlayerController2;
   ChewieController? _chewieController;
-
+  final textController = TextEditingController();
   @override
   void initState() {
     super.initState();
@@ -40,21 +122,10 @@ class _StreamFrameState extends State<StreamFrame> {
     super.dispose();
   }
 
-//TODO: clean this up and take from attachment
-  List<String> srcs = [
-    "https://assets.mixkit.co/videos/preview/mixkit-daytime-city-traffic-aerial-view-56-large.mp4",
-    "https://assets.mixkit.co/videos/preview/mixkit-a-girl-blowing-a-bubble-gum-at-an-amusement-park-1226-large.mp4"
-  ];
-
   Future<void> initializePlayer() async {
-    _videoPlayerController1 =
-        VideoPlayerController.network(srcs[currPlayIndex]);
-    _videoPlayerController2 =
-        VideoPlayerController.network(srcs[currPlayIndex]);
-    await Future.wait([
-      _videoPlayerController1.initialize(),
-      _videoPlayerController2.initialize()
-    ]);
+    _videoPlayerController1 = VideoPlayerController.network(widget.videoUrl);
+
+    await _videoPlayerController1.initialize();
     _createChewieController();
     setState(() {});
   }
@@ -98,49 +169,6 @@ class _StreamFrameState extends State<StreamFrame> {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: widget.title,
-      theme: AppTheme.light.copyWith(
-        platform: _platform ?? Theme.of(context).platform,
-      ),
-      home: Scaffold(
-        appBar: AppBar(
-          title: Text(
-            "Stream Frame",
-          ),
-        ),
-        body: ReviewProject(
-            chewieController: _chewieController,
-            projectName: "streamagram.mov",
-            authorName: "Gordon Hayes",
-            description: "this is a descrption",
-            publishedDate: DateTime(2022, 05, 02)),
-      ),
-    );
-  }
-}
-
-String formatPublishedDate(DateTime publishedDate) =>
-    timeago.format(publishedDate);
-
-class ReviewProject extends StatelessWidget {
-  const ReviewProject({
-    Key? key,
-    required ChewieController? chewieController,
-    required this.projectName,
-    required this.authorName,
-    required this.publishedDate,
-    required this.description,
-  })  : _chewieController = chewieController,
-        super(key: key);
-  final String projectName;
-  final String authorName;
-  final DateTime publishedDate;
-  final String description;
-  final ChewieController? _chewieController;
-
-  @override
-  Widget build(BuildContext context) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: <Widget>[
@@ -161,17 +189,17 @@ class ReviewProject extends StatelessWidget {
         ),
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 16),
-          child:
-              Text(projectName, style: TextStyle(fontWeight: FontWeight.bold)),
+          child: Text(widget.projectName,
+              style: TextStyle(fontWeight: FontWeight.bold)),
         ),
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 8.0),
           child: Row(
             children: [
-              Text(authorName,
+              Text(widget.authorName,
                   style: TextStyle(
                       color: Colors.grey, fontWeight: FontWeight.bold)),
-              Text("Uploaded ${formatPublishedDate(publishedDate)}",
+              Text("Uploaded ${formatPublishedDate(widget.publishedDate)}",
                   style: TextStyle(
                       color: Colors.grey, fontWeight: FontWeight.bold))
             ],
@@ -180,15 +208,18 @@ class ReviewProject extends StatelessWidget {
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 8.0),
           child: Text(
-            description,
+            widget.description,
             style: TextStyle(color: Colors.grey),
           ),
         ),
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 16),
-          child: Text("2 Comments"),
+          child: Text("${widget.reactionCounts} Comments"),
         ), //TODO: replace with number for comments from feeds
-        CommentListView(chewieController: _chewieController),
+        CommentListView(
+          activity: widget.activity,
+          chewieController: _chewieController,
+        ),
         Spacer(),
         Padding(
           padding: const EdgeInsets.all(8.0),
@@ -200,15 +231,20 @@ class ReviewProject extends StatelessWidget {
                   children: [
                     Padding(
                       padding: const EdgeInsets.all(8.0),
-                      child: FrameAvatar(url: "https://i.pravatar.cc/300"),//TODO: replace with currentUser avatar 
+                      child: FrameAvatar(
+                          url: FeedProvider.of(context)
+                              .bloc
+                              .currentUser!
+                              .data!["profile_image"] as String),
                     ),
                     Flexible(
                       child: Padding(
                         padding: const EdgeInsets.all(8.0),
                         child: TextField(
+                            controller: textController,
                             decoration: InputDecoration.collapsed(
-                          hintText: "Leave your comment here",
-                        )),
+                              hintText: "Leave your comment here",
+                            )),
                       ),
                     ),
                   ],
@@ -233,8 +269,27 @@ class ReviewProject extends StatelessWidget {
                       Container(
                         child: TextButton(
                             onPressed: () {
-                              print("send");
-                              //TODOs: - onAddReaction comment
+                              FeedProvider.of(context).bloc.onAddReaction(
+                                kind: "comment",
+                                activity: widget.activity,
+                                feedGroup: 'user',
+                                data: {
+                                  "timestamp": 12, //TODO: unhardcode this
+                                  "text": textController.text, //_
+                                },
+                              );
+
+                              //                     Reaction(
+                              //   user: User(data: {
+                              //     "full_name": "Gordon Hayes",
+                              //     "profile_image": "https://i.pravatar.cc/300"
+                              //   }),
+                              //   data: {
+                              //     "timestamp": 12,
+                              //     "text": "Need to fix weird animation thing here",
+                              //   },
+                              //   createdAt: DateTime(2022, 04, 02),
+                              // )
                             },
                             child: Text("Send")),
                       )
@@ -254,43 +309,69 @@ class CommentListView extends StatelessWidget {
   const CommentListView({
     Key? key,
     required ChewieController? chewieController,
+    required this.activity,
   })  : _chewieController = chewieController,
         super(key: key);
-
+  final EnrichedActivity activity;
   final ChewieController? _chewieController;
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      //TODO: replace with flat feed core
-      children: [
-        Comment(
-            username: "Gordon Hayes",
-            timestamp: 12,
-            text: "Need to fix weird animation thing here",
-            date: DateTime(2022, 04, 02),
-            onSeekTo: (int timestamp) {
-              _chewieController!.seekTo(Duration(seconds: timestamp));
-            }),
-      ],
+    return ReactionListCore(
+      lookupValue: activity.id!,
+      loadingBuilder: (context) => const Center(
+        child: CircularProgressIndicator(),
+      ),
+      emptyBuilder: (context) =>
+          const Center(child: Text('No comment reactions')),
+      errorBuilder: (context, error) => Center(
+        child: Text(error.toString()),
+      ),
+      reactionsBuilder: (BuildContext context, List<Reaction> reactions) {
+        return ListView.builder(
+            scrollDirection: Axis.vertical,
+            shrinkWrap: true,
+            itemBuilder: (context, index) => FrameComment(
+                reaction: reactions[index],
+                activity: activity,
+                username: reactions[index].user!.data!['full_name']
+                    as String, //"Gordon Hayes",
+                avatarUrl: reactions[index].user!.data!['profile_image']
+                    as String, //"https://i.pravatar.cc/300"
+                timestamp: reactions[index].data!["timestamp"] as int, //12
+                text: reactions[index].data!["text"]
+                    as String, // "Need to fix weird animation thing here"
+                date: reactions[index].createdAt!, // DateTime(2022, 04, 02),
+
+                onSeekTo: (int timestamp) {
+                  _chewieController!.seekTo(Duration(seconds: timestamp));
+                }));
+      },
     );
   }
 }
 
-class Comment extends StatelessWidget {
-  const Comment({
+class FrameComment extends StatelessWidget {
+  const FrameComment({
     Key? key,
     required this.timestamp,
     required this.text,
     required this.date,
     required this.username,
     required this.onSeekTo,
+    required this.avatarUrl,
+    required this.reaction,
+    required this.activity,
   }) : super(key: key);
+  final Reaction reaction;
+  final EnrichedActivity activity;
   final int timestamp;
   final DateTime date;
   final String text;
   final String username;
+  final String avatarUrl;
   final void Function(int timestamp) onSeekTo;
+
   @override
   Widget build(BuildContext context) {
     return Column(
@@ -300,9 +381,7 @@ class Comment extends StatelessWidget {
           child: Row(
             mainAxisAlignment: MainAxisAlignment.start,
             children: [
-              FrameAvatar(
-                  url:
-                      "https://i.pravatar.cc/300"), //TODO: replace with actual avatar
+              FrameAvatar(url: avatarUrl), //TODO: replace with actual avatar
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 8.0),
                 child: Text(
@@ -346,6 +425,15 @@ class Comment extends StatelessWidget {
           children: [
             TextButton(
               onPressed: () {
+                // FeedProvider.of(context).bloc.onAddChildReaction(
+                //       kind: "comment",
+                //       activity: activity,
+                //       data: {
+                //         "timestamp": 12, //TODO: unhardcode this
+                //         "text": replyController.text, //_
+                //       },
+                //       reaction: reaction,
+                //     );
                 print("reply");
                 //TODOs: - onAddChildReaction comment
                 //      - toggle TextField
@@ -358,7 +446,8 @@ class Comment extends StatelessWidget {
             IconButton(
               onPressed: () {
                 print("like");
-                //TODOs: - onAddChildReaction like
+                FeedProvider.of(context).bloc.onAddChildReaction(
+                    kind: 'like', reaction: reaction, activity: activity);
               },
               icon: Icon(
                 Icons.thumb_up_outlined,
@@ -411,9 +500,42 @@ class AppTheme {
   );
 }
 
-void main() {
+Future<void> main() async {
+  const apiKey = String.fromEnvironment('key');
+  const userToken = String.fromEnvironment('user_token');
+  final client = StreamFeedClient(apiKey);
+
+  await client.setUser(
+    const User(
+      id: 'GroovinChip',
+      data: {
+        'handle': '@GroovinChip',
+        'first_name': 'Reuben',
+        'last_name': 'Turner',
+        'full_name': 'Reuben Turner',
+        'profile_image': 'https://avatars.githubusercontent.com/u/4250470?v=4',
+      },
+    ),
+    const Token(userToken),
+  );
+  final feedGroup =
+      'user'; //or maybe we could call this something more meaningful like video_feed
+  client.flatFeed(feedGroup).addActivity(Activity(
+      verb: "add",
+      extraData: {
+        "description": "this is a descrption",
+        "project_name": "streamagram.mov",
+        "video_url":
+            "https://assets.mixkit.co/videos/preview/mixkit-daytime-city-traffic-aerial-view-56-large.mp4"
+        //TODO: interface with a small form+ file picker + upload core to create a new project
+      },
+      actor: client.currentUser!.ref,
+      object: "video",
+      time: DateTime(2022, 05, 02)));
   runApp(
-    const StreamFrame(),
+    StreamFrame(
+      client: client,
+    ),
   );
 }
 
