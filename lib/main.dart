@@ -260,6 +260,10 @@ class _ReviewProjectState extends State<ReviewProject> {
                             SizedBox(
                               width: 12,
                             ),
+                            //TODO: update this value continuously (in a performant way) from
+                            // _chewieController!.videoPlayerController.value.position
+                            //save it in a field so it's usable by as timestamp param for
+                            //onAddReaction
                             Text(convertDuration(Duration(seconds: 2))),
                           ],
                         ),
