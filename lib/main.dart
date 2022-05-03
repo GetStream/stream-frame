@@ -1,5 +1,6 @@
 import 'package:chewie/chewie.dart';
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:stream_feed_flutter_core/stream_feed_flutter_core.dart';
 import 'package:timeago/timeago.dart' as timeago;
 
@@ -46,6 +47,13 @@ class Projects extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      floatingActionButton: FloatingActionButton(
+          onPressed: () {
+            Navigator.of(context).restorablePush(_dialogBuilder);
+          },
+          child: Icon(
+            Icons.add,
+          )),
       appBar: AppBar(
         title: Text(
           "Stream Frame",
@@ -67,7 +75,6 @@ class Projects extends StatelessWidget {
           ..withReactionCounts()
           ..withOwnReactions(),
         feedBuilder: (context, activities) {
-          print(activities);
           return GridView.builder(
             itemCount: activities.length,
 
@@ -81,6 +88,129 @@ class Projects extends StatelessWidget {
           );
         },
       ),
+    );
+  }
+
+  static Route<Object?> _dialogBuilder(
+      BuildContext context, Object? arguments) {
+    return DialogRoute<void>(
+      context: context,
+      builder: (BuildContext context) => NewProjectDialog(),
+    );
+  }
+}
+
+class NewProjectDialog extends StatelessWidget {
+  const NewProjectDialog({Key? key}) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    final projectNameController = TextEditingController();
+    final projectDescController = TextEditingController();
+    final uploadController = FeedProvider.of(context).bloc.uploadController;
+    return SimpleDialog(title: Text('New project'), children: [
+      Padding(
+        padding: EdgeInsets.all(8.0),
+        child: TextField(
+            controller: projectNameController,
+            decoration: InputDecoration.collapsed(
+              hintText: "Enter Project Name",
+            )),
+      ),
+      Padding(
+        padding: EdgeInsets.all(8.0),
+        child: TextField(
+            controller: projectDescController,
+            decoration: InputDecoration.collapsed(
+              hintText: "Enter Project Description",
+            )),
+      ),
+      UploadFileButton(),
+      Container(
+        width: double.maxFinite,
+        child: UploadListCore(
+          uploadController: uploadController,
+          loadingBuilder: (context) =>
+              const Center(child: CircularProgressIndicator()),
+          uploadsErrorBuilder: (error) => Center(child: Text(error.toString())),
+          uploadsBuilder: (context, uploads) {
+            return SizedBox(
+              height: 100,
+              child: ListView.builder(
+                shrinkWrap: true,
+                scrollDirection: Axis.horizontal,
+                itemCount: uploads.length,
+                itemBuilder: (context, index) => FileUploadStateWidget(
+                    fileState: uploads[index],
+                    onRemoveUpload: (attachment) {
+                      return uploadController.removeUpload(attachment);
+                    },
+                    onCancelUpload: (attachment) {
+                      uploadController.cancelUpload(attachment);
+                    },
+                    onRetryUpload: (attachment) async {
+                      return uploadController.uploadImage(attachment);
+                    }),
+              ),
+            );
+          },
+        ),
+      ),
+      TextButton(
+          onPressed: () {
+            print("Creating project");
+            final client = FeedProvider.of(context).bloc.client;
+
+            client.flatFeed('video_timeline').addActivity(Activity(
+                verb: "add",
+                extraData: {
+                  "description": projectDescController.text,
+                  "project_name": projectNameController.text,
+                  "video_url":
+                      uploadController.getMediaUris()!.first.uri.toString(),
+                },
+                actor: client.currentUser!.ref,
+                object: "video",
+                time: DateTime.now()));
+          },
+          child: Text("Create"))
+    ]);
+  }
+}
+
+class UploadFileButton extends StatelessWidget {
+  const UploadFileButton({
+    Key? key,
+  }) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        IconButton(
+          onPressed: () async {
+            final ImagePicker _picker = ImagePicker();
+            final XFile? video = await _picker.pickVideo(
+              source: ImageSource.gallery,
+            );
+
+            if (video != null) {
+              await FeedProvider.of(context)
+                  .bloc
+                  .uploadController
+                  .uploadMedia(AttachmentFile(path: video.path));
+            } else {
+              ScaffoldMessenger.of(context)
+                  .showSnackBar(const SnackBar(content: Text('Cancelled')));
+            }
+          },
+          icon: const Icon(Icons.file_copy),
+        ),
+        Text(
+          'Add a video',
+          style: Theme.of(context).textTheme.caption,
+        ),
+      ],
     );
   }
 }
@@ -250,7 +380,7 @@ class _ReviewProjectState extends State<ReviewProject> {
     return Scaffold(
       appBar: AppBar(
         title: Text(
-          "Stream Frame",
+          widget.projectName,
         ),
       ),
       body: Column(
@@ -578,14 +708,14 @@ class FrameAvatar extends StatelessWidget {
 class AppTheme {
   static final light = ThemeData(
     brightness: Brightness.light,
-    colorScheme: const ColorScheme.light(secondary: Colors.red),
+    colorScheme: const ColorScheme.light(secondary: Colors.blue),
     disabledColor: Colors.grey.shade400,
     visualDensity: VisualDensity.adaptivePlatformDensity,
   );
 
   static final dark = ThemeData(
     brightness: Brightness.dark,
-    colorScheme: const ColorScheme.dark(secondary: Colors.red),
+    colorScheme: const ColorScheme.dark(secondary: Colors.deepPurple),
     disabledColor: Colors.grey.shade400,
     visualDensity: VisualDensity.adaptivePlatformDensity,
   );
@@ -611,18 +741,7 @@ Future<void> main() async {
   );
   final feedGroup =
       'video_timeline'; //or maybe we could call this something more meaningful like video_feed
-  // client.flatFeed(feedGroup).addActivity(Activity(
-  //     verb: "add",
-  //     extraData: {
-  //       "description": "this is a descrption",
-  //       "project_name": "streamagram.mov",
-  //       "video_url":
-  //           "https://assets.mixkit.co/videos/preview/mixkit-daytime-city-traffic-aerial-view-56-large.mp4"
-  //       //TODO: interface with a small form+ file picker + upload core to create a new project
-  //     },
-  //     actor: client.currentUser!.ref,
-  //     object: "video",
-  //     time: DateTime(2022, 05, 02)));
+
   runApp(
     StreamFrame(
       client: client,
