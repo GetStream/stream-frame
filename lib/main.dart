@@ -24,53 +24,62 @@ class _StreamFrameState extends State<StreamFrame> {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      builder: (context, child) => FeedProvider(
-        bloc: FeedBloc(
-          client: widget.client,
+    var materialApp = MaterialApp(
+        builder: (context, child) => FeedProvider(
+              bloc: FeedBloc(
+                client: widget.client,
+              ),
+              child: child!,
+            ),
+        title: widget.title,
+        theme: AppTheme.light.copyWith(
+          platform: _platform ?? Theme.of(context).platform,
         ),
-        child: child!,
+        home: Projects());
+    return materialApp;
+  }
+}
+
+class Projects extends StatelessWidget {
+  const Projects({Key? key}) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: Text(
+          "Stream Frame",
+        ),
       ),
-      title: widget.title,
-      theme: AppTheme.light.copyWith(
-        platform: _platform ?? Theme.of(context).platform,
-      ),
-      home: Scaffold(
-        appBar: AppBar(
-          title: Text(
-            "Stream Frame",
-          ),
+      body: FlatFeedCore(
+        feedGroup: 'video_timeline',
+        userId: FeedProvider.of(context).bloc.currentUser!.id,
+        loadingBuilder: (context) => const Center(
+          child: CircularProgressIndicator(),
         ),
-        body: FlatFeedCore(
-          feedGroup: 'user',
-          userId: FeedProvider.of(context).bloc.currentUser!.id,
-          loadingBuilder: (context) => const Center(
-            child: CircularProgressIndicator(),
-          ),
-          emptyBuilder: (context) =>
-              const Center(child: Text('No video to review')),
-          errorBuilder: (context, error) => Center(
-            child: Text(error.toString()),
-          ),
-          limit: 10,
-          flags: EnrichmentFlags()
-            ..withReactionCounts()
-            ..withOwnReactions(),
-          feedBuilder: (context, activities) => ListView.builder(
-              //TODO: add a step in between (PreviewProject(commentNumber,preview?)) that Navigator.push to ReviewProject
-              itemBuilder: (context, index) => ReviewProject(
-                  activity: activities[index],
-                  reactionCounts:
-                      activities[index].reactionCounts?["comment"] as int?,
-                  videoUrl: activities[index].extraData!['video_url'] as String,
-                  projectName: activities[index].extraData!["project_name"]
-                      as String, // "streamagram.mov",
-                  authorName: activities[index].actor!.data!["full_name"]
-                      as String, //"Gordon Hayes",
-                  description: activities[index].extraData!["description"]
-                      as String, // "this is a descrption",
-                  publishedDate: DateTime(2022, 05, 02))),
+        emptyBuilder: (context) =>
+            const Center(child: Text('No video to review')),
+        errorBuilder: (context, error) => Center(
+          child: Text(error.toString()),
         ),
+        limit: 10,
+        flags: EnrichmentFlags()
+          ..withReactionCounts()
+          ..withOwnReactions(),
+        feedBuilder: (context, activities) {
+          print(activities);
+          return GridView.builder(
+            itemCount: activities.length,
+
+            //TODO: add a step in between (PreviewProject(commentNumber,preview?)) that Navigator.push to ReviewProject
+            itemBuilder: (context, index) => ProjectPreview(
+              activity: activities[index],
+            ),
+            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: 2,
+            ),
+          );
+        },
       ),
     );
   }
@@ -78,6 +87,77 @@ class _StreamFrameState extends State<StreamFrame> {
 
 String formatPublishedDate(DateTime publishedDate) =>
     timeago.format(publishedDate);
+
+class ProjectPreview extends StatelessWidget {
+  final EnrichedActivity activity;
+  const ProjectPreview({Key? key, required this.activity}) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    final projectName = activity.extraData!["project_name"] as String;
+    final commentNumber = activity.reactionCounts?["comment"] as int? ?? 0;
+    final authorName = activity.actor!.data!["full_name"] as String;
+    final publishedDate = activity.time!; //. DateTime(2022, 05, 02);
+    return Card(
+      semanticContainer: true,
+      // color: Colors.purple,
+      clipBehavior: Clip.antiAliasWithSaveLayer,
+      child: InkWell(
+        onTap: () {
+          Navigator.push(
+              context,
+              MaterialPageRoute(
+                  builder: (context) => ReviewProject(
+                      activity: activity,
+                      reactionCounts: commentNumber,
+                      videoUrl: activity.extraData!['video_url'] as String,
+                      projectName: projectName, // "streamagram.mov",
+                      authorName: authorName, //"Gordon Hayes",
+                      description: activity.extraData!["description"]
+                          as String, // "this is a descrption",
+                      publishedDate: publishedDate)));
+        },
+        child: Column(
+          children: [
+            Image.network(
+              'https://placeimg.com/640/480/any',
+              fit: BoxFit.fill,
+            ),
+            Text(
+              projectName,
+              style: TextStyle(fontWeight: FontWeight.bold),
+            ),
+
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceAround,
+              children: [
+                Text(
+                  authorName,
+                ),
+                Row(
+                  children: [
+                    Icon(
+                      Icons.comment_rounded,
+                      size: 14,
+                    ),
+                    Text("$commentNumber"),
+                  ],
+                )
+              ],
+            )
+
+            // Container(color: Colors.blueGrey)
+          ],
+        ),
+      ),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(10.0),
+      ),
+      elevation: 5,
+      margin: EdgeInsets.all(10),
+    );
+  }
+}
 
 class ReviewProject extends StatefulWidget {
   const ReviewProject({
@@ -91,7 +171,7 @@ class ReviewProject extends StatefulWidget {
     this.reactionCounts = 0,
   }) : super(key: key);
   final EnrichedActivity activity;
-  final int? reactionCounts;
+  final int reactionCounts;
   final String projectName;
   final String authorName;
   final DateTime publishedDate;
@@ -167,142 +247,150 @@ class _ReviewProjectState extends State<ReviewProject> {
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: <Widget>[
-        Expanded(
-          child: _chewieController != null &&
-                  _chewieController!.videoPlayerController.value.isInitialized
-              ? Chewie(
-                  controller: _chewieController!,
-                )
-              : Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: const [
-                    CircularProgressIndicator(),
-                    SizedBox(height: 20),
-                    Text('Loading'),
-                  ],
-                ),
+    return Scaffold(
+      appBar: AppBar(
+        title: Text(
+          "Stream Frame",
         ),
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 16),
-          child: Text(widget.projectName,
-              style: TextStyle(fontWeight: FontWeight.bold)),
-        ),
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 8.0),
-          child: Row(
-            children: [
-              Text(widget.authorName,
-                  style: TextStyle(
-                      color: Colors.grey, fontWeight: FontWeight.bold)),
-              Text("Uploaded ${formatPublishedDate(widget.publishedDate)}",
-                  style: TextStyle(
-                      color: Colors.grey, fontWeight: FontWeight.bold))
-            ],
-          ),
-        ),
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 8.0),
-          child: Text(
-            widget.description,
-            style: TextStyle(color: Colors.grey),
-          ),
-        ),
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 16),
-          child: Text("${widget.reactionCounts} Comments"),
-        ),
-        CommentListView(
-          activity: widget.activity,
-          chewieController: _chewieController,
-        ),
-        Spacer(),
-        Padding(
-          padding: const EdgeInsets.all(8.0),
-          child: Card(
-            child: Column(
-              children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.end,
-                  children: [
-                    Padding(
-                      padding: const EdgeInsets.all(8.0),
-                      child: FrameAvatar(
-                          url: FeedProvider.of(context)
-                              .bloc
-                              .currentUser!
-                              .data!["profile_image"] as String),
-                    ),
-                    Flexible(
-                      child: Padding(
-                        padding: const EdgeInsets.all(8.0),
-                        child: TextField(
-                            controller: textController,
-                            decoration: InputDecoration.collapsed(
-                              hintText: "Leave your comment here",
-                            )),
-                      ),
-                    ),
-                  ],
-                ),
-                Padding(
-                  padding: const EdgeInsets.all(8.0),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Padding(
-                        padding: const EdgeInsets.all(8.0),
-                        child: Row(
-                          children: [
-                            Icon(Icons.timer),
-                            SizedBox(
-                              width: 12,
-                            ),
-                            //TODO: update this value continuously (in a performant way) from
-                            // _chewieController!.videoPlayerController.value.position
-                            //save it in a field so it's usable by as timestamp param for
-                            //onAddReaction
-                            Text(convertDuration(Duration(seconds: 2))),
-                          ],
-                        ),
-                      ),
-                      Container(
-                        child: TextButton(
-                            onPressed: () {
-                              FeedProvider.of(context).bloc.onAddReaction(
-                                kind: "comment",
-                                activity: widget.activity,
-                                feedGroup: 'user',
-                                data: {
-                                  "timestamp": 12, //TODO: unhardcode this
-                                  "text": textController.text, //_
-                                },
-                              );
-
-                              //                     Reaction(
-                              //   user: User(data: {
-                              //     "full_name": "Gordon Hayes",
-                              //     "profile_image": "https://i.pravatar.cc/300"
-                              //   }),
-                              //   data: {
-                              //     "timestamp": 12,
-                              //     "text": "Need to fix weird animation thing here",
-                              //   },
-                              //   createdAt: DateTime(2022, 04, 02),
-                              // )
-                            },
-                            child: Text("Send")),
-                      )
+      ),
+      body: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          Expanded(
+            child: _chewieController != null &&
+                    _chewieController!.videoPlayerController.value.isInitialized
+                ? Chewie(
+                    controller: _chewieController!,
+                  )
+                : Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: const [
+                      CircularProgressIndicator(),
+                      SizedBox(height: 20),
+                      Text('Loading'),
                     ],
                   ),
-                ) //convertDuration(position)
+          ),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 16),
+            child: Text(widget.projectName,
+                style: TextStyle(fontWeight: FontWeight.bold)),
+          ),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 8.0),
+            child: Row(
+              children: [
+                Text(widget.authorName,
+                    style: TextStyle(
+                        color: Colors.grey, fontWeight: FontWeight.bold)),
+                Text(" uploaded ${formatPublishedDate(widget.publishedDate)}",
+                    style: TextStyle(
+                        color: Colors.grey, fontWeight: FontWeight.bold))
               ],
             ),
           ),
-        ),
-      ],
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 8.0),
+            child: Text(
+              widget.description,
+              style: TextStyle(color: Colors.grey),
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 16),
+            child: Text("${widget.reactionCounts} Comments"),
+          ),
+          CommentListView(
+            activity: widget.activity,
+            chewieController: _chewieController,
+          ),
+          Spacer(),
+          Padding(
+            padding: const EdgeInsets.all(8.0),
+            child: Card(
+              child: Column(
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.end,
+                    children: [
+                      Padding(
+                        padding: const EdgeInsets.all(8.0),
+                        child: FrameAvatar(
+                            url: FeedProvider.of(context)
+                                    .bloc
+                                    .currentUser!
+                                    .data?["profile_image"] as String? ??
+                                "https://i.pravatar.cc/300"),
+                      ),
+                      Flexible(
+                        child: Padding(
+                          padding: const EdgeInsets.all(8.0),
+                          child: TextField(
+                              controller: textController,
+                              decoration: InputDecoration.collapsed(
+                                hintText: "Leave your comment here",
+                              )),
+                        ),
+                      ),
+                    ],
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.all(8.0),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Padding(
+                          padding: const EdgeInsets.all(8.0),
+                          child: Row(
+                            children: [
+                              Icon(Icons.timer),
+                              SizedBox(
+                                width: 12,
+                              ),
+                              //TODO: update this value continuously (in a performant way) from
+                              // _chewieController!.videoPlayerController.value.position
+                              //save it in a field so it's usable by as timestamp param for
+                              //onAddReaction
+                              Text(convertDuration(Duration(seconds: 2))),
+                            ],
+                          ),
+                        ),
+                        Container(
+                          child: TextButton(
+                              onPressed: () {
+                                FeedProvider.of(context).bloc.onAddReaction(
+                                  kind: "comment",
+                                  activity: widget.activity,
+                                  feedGroup: 'video_timeline',
+                                  data: {
+                                    "timestamp": 12, //TODO: unhardcode this
+                                    "text": textController.text, //_
+                                  },
+                                );
+
+                                //                     Reaction(
+                                //   user: User(data: {
+                                //     "full_name": "Gordon Hayes",
+                                //     "profile_image": "https://i.pravatar.cc/300"
+                                //   }),
+                                //   data: {
+                                //     "timestamp": 12,
+                                //     "text": "Need to fix weird animation thing here",
+                                //   },
+                                //   createdAt: DateTime(2022, 04, 02),
+                                // )
+                              },
+                              child: Text("Send")),
+                        )
+                      ],
+                    ),
+                  ) //convertDuration(position)
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
@@ -324,8 +412,7 @@ class CommentListView extends StatelessWidget {
       loadingBuilder: (context) => const Center(
         child: CircularProgressIndicator(),
       ),
-      emptyBuilder: (context) =>
-          const Center(child: Text('No comment reactions')),
+      emptyBuilder: (context) => Offstage(),
       errorBuilder: (context, error) => Center(
         child: Text(error.toString()),
       ),
@@ -333,13 +420,15 @@ class CommentListView extends StatelessWidget {
         return ListView.builder(
             scrollDirection: Axis.vertical,
             shrinkWrap: true,
+            itemCount: reactions.length,
             itemBuilder: (context, index) => FrameComment(
                 reaction: reactions[index],
                 activity: activity,
                 username: reactions[index].user!.data!['full_name']
                     as String, //"Gordon Hayes",
                 avatarUrl: reactions[index].user!.data!['profile_image']
-                    as String, //"https://i.pravatar.cc/300"
+                        as String? ??
+                    "https://i.pravatar.cc/300", //"https://i.pravatar.cc/300"
                 timestamp: reactions[index].data!["timestamp"] as int, //12
                 text: reactions[index].data!["text"]
                     as String, // "Need to fix weird animation thing here"
@@ -503,7 +592,7 @@ class AppTheme {
 }
 
 Future<void> main() async {
-  const apiKey = String.fromEnvironment('key');
+  const apiKey = String.fromEnvironment('api_key');
   const userToken = String.fromEnvironment('user_token');
   final client = StreamFeedClient(apiKey);
 
@@ -521,19 +610,19 @@ Future<void> main() async {
     const Token(userToken),
   );
   final feedGroup =
-      'user'; //or maybe we could call this something more meaningful like video_feed
-  client.flatFeed(feedGroup).addActivity(Activity(
-      verb: "add",
-      extraData: {
-        "description": "this is a descrption",
-        "project_name": "streamagram.mov",
-        "video_url":
-            "https://assets.mixkit.co/videos/preview/mixkit-daytime-city-traffic-aerial-view-56-large.mp4"
-        //TODO: interface with a small form+ file picker + upload core to create a new project
-      },
-      actor: client.currentUser!.ref,
-      object: "video",
-      time: DateTime(2022, 05, 02)));
+      'video_timeline'; //or maybe we could call this something more meaningful like video_feed
+  // client.flatFeed(feedGroup).addActivity(Activity(
+  //     verb: "add",
+  //     extraData: {
+  //       "description": "this is a descrption",
+  //       "project_name": "streamagram.mov",
+  //       "video_url":
+  //           "https://assets.mixkit.co/videos/preview/mixkit-daytime-city-traffic-aerial-view-56-large.mp4"
+  //       //TODO: interface with a small form+ file picker + upload core to create a new project
+  //     },
+  //     actor: client.currentUser!.ref,
+  //     object: "video",
+  //     time: DateTime(2022, 05, 02)));
   runApp(
     StreamFrame(
       client: client,
