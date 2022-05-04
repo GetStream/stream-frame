@@ -136,7 +136,8 @@ class NewProjectDialog extends StatelessWidget {
           uploadsBuilder: (context, uploads) {
             return SizedBox(
               height: 100,
-              child: ListView.builder(
+              child: ListView.separated(
+                separatorBuilder: (context, index) => const Divider(),
                 shrinkWrap: true,
                 scrollDirection: Axis.horizontal,
                 itemCount: uploads.length,
@@ -431,9 +432,13 @@ class _ReviewProjectState extends State<ReviewProject> {
             padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 16),
             child: Text("${widget.reactionCounts} Comments"),
           ),
-          CommentListView(
-            activity: widget.activity,
-            chewieController: _chewieController,
+          Expanded(
+            child: CommentListView(
+              key: Key("${widget.activity.id}_comments"),
+              activity: widget.activity,
+              chewieController: _chewieController,
+              lookupValue: widget.activity.id!,
+            ),
           ),
           // Spacer(),
           Padding(
@@ -539,56 +544,63 @@ class CommentSectionCard extends StatelessWidget {
 }
 
 class CommentListView extends StatelessWidget {
-  const CommentListView({
-    Key? key,
-    required ChewieController? chewieController,
-    required this.activity,
-  })  : _chewieController = chewieController,
+  const CommentListView(
+      {Key? key,
+      ChewieController? chewieController,
+      required this.activity,
+      required this.lookupValue,
+      this.lookupAttr = LookupAttribute.activityId})
+      : _chewieController = chewieController,
         super(key: key);
   final EnrichedActivity activity;
   final ChewieController? _chewieController;
+  final LookupAttribute lookupAttr;
+  final String lookupValue;
 
   @override
   Widget build(BuildContext context) {
-    return Expanded(
-      child: ReactionListCore(
-        lookupValue: activity.id!,
-        loadingBuilder: (context) => const Center(
-          child: CircularProgressIndicator(),
-        ),
-        emptyBuilder: (context) => Offstage(),
-        errorBuilder: (context, error) => Center(
-          child: Text(error.toString()),
-        ),
-        reactionsBuilder: (BuildContext context, List<Reaction> reactions) {
-          return ListView.builder(
-              scrollDirection: Axis.vertical,
-              shrinkWrap: true,
-              reverse: true,
-              itemCount: reactions.length,
-              itemBuilder: (context, index) => FrameComment(
-                  reaction: reactions[index],
-                  activity: activity,
-                  username: reactions[index].user!.data!['full_name']
-                      as String, //"Gordon Hayes",
-                  avatarUrl: reactions[index].user!.data!['profile_image']
-                          as String? ??
-                      "https://i.pravatar.cc/300", //"https://i.pravatar.cc/300"
-                  timestamp: reactions[index].data!["timestamp"] as int, //12
-                  text: reactions[index].data!["text"]
-                      as String, // "Need to fix weird animation thing here"
-                  date: reactions[index].createdAt!, // DateTime(2022, 04, 02),
-
-                  onSeekTo: (int timestamp) {
-                    _chewieController!.seekTo(Duration(seconds: timestamp));
-                  }));
-        },
+    return ReactionListCore(
+      lookupValue: lookupValue,
+      lookupAttr: lookupAttr,
+      flags: EnrichmentFlags().withOwnChildren(),
+      loadingBuilder: (context) => const Center(
+        child: CircularProgressIndicator(),
       ),
+      emptyBuilder: (context) => Offstage(),
+      errorBuilder: (context, error) => Center(
+        child: Text(error.toString()),
+      ),
+      reactionsBuilder: (BuildContext context, List<Reaction> reactions) {
+        return ListView.separated(
+            scrollDirection: Axis.vertical,
+            separatorBuilder: (context, index) => const Divider(),
+            shrinkWrap: true,
+            reverse: true,
+            itemCount: reactions.length,
+            itemBuilder: (context, index) => FrameComment(
+                reaction: reactions[index],
+                activity: activity,
+                username: reactions[index].user!.data!['full_name']
+                    as String, //"Gordon Hayes",
+                avatarUrl: reactions[index].user!.data!['profile_image']
+                        as String? ??
+                    "https://i.pravatar.cc/300", //"https://i.pravatar.cc/300"
+                timestamp: reactions[index].data!["timestamp"] as int?, //12
+                text: reactions[index].data!["text"]
+                    as String, // "Need to fix weird animation thing here"
+                date: reactions[index].createdAt!, // DateTime(2022, 04, 02),
+
+                onSeekTo: _chewieController != null
+                    ? (int timestamp) {
+                        _chewieController?.seekTo(Duration(seconds: timestamp));
+                      }
+                    : null));
+      },
     );
   }
 }
 
-class FrameComment extends StatelessWidget {
+class FrameComment extends StatefulWidget {
   const FrameComment({
     Key? key,
     required this.timestamp,
@@ -602,13 +614,19 @@ class FrameComment extends StatelessWidget {
   }) : super(key: key);
   final Reaction reaction;
   final EnrichedActivity activity;
-  final int timestamp;
+  final int? timestamp;
   final DateTime date;
   final String text;
   final String username;
   final String avatarUrl;
-  final void Function(int timestamp) onSeekTo;
+  final void Function(int timestamp)? onSeekTo;
 
+  @override
+  State<FrameComment> createState() => _FrameCommentState();
+}
+
+class _FrameCommentState extends State<FrameComment> {
+  bool showTextField = false;
   @override
   Widget build(BuildContext context) {
     return Column(
@@ -618,18 +636,18 @@ class FrameComment extends StatelessWidget {
           child: Row(
             mainAxisAlignment: MainAxisAlignment.start,
             children: [
-              FrameAvatar(url: avatarUrl),
+              FrameAvatar(url: widget.avatarUrl),
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 8.0),
                 child: Text(
-                  username,
+                  widget.username,
                   style: TextStyle(fontWeight: FontWeight.bold),
                 ),
               ),
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 8.0),
                 child: Text(
-                  formatPublishedDate(date),
+                  formatPublishedDate(widget.date),
                 ),
               ),
             ],
@@ -638,30 +656,34 @@ class FrameComment extends StatelessWidget {
         Row(
           mainAxisAlignment: MainAxisAlignment.start,
           children: [
-            GestureDetector(
-              child: Padding(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 8.0, vertical: 12.0),
-                child: Text(
-                  timestampConverted,
-                  style: TextStyle(
-                    color: Colors.blue,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 13,
+            if (widget.onSeekTo != null)
+              GestureDetector(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 8.0, vertical: 12.0),
+                  child: Text(
+                    convertDuration(Duration(seconds: widget.timestamp!)),
+                    style: TextStyle(
+                      color: Colors.blue,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 13,
+                    ),
                   ),
                 ),
+                onTap: () {
+                  widget.onSeekTo!(widget.timestamp!);
+                },
               ),
-              onTap: () {
-                onSeekTo(timestamp);
-              },
-            ),
-            Text(text),
+            Text(widget.text),
           ],
         ),
         Row(
           children: [
             TextButton(
               onPressed: () {
+                setState(() {
+                  showTextField = !showTextField;
+                });
                 // FeedProvider.of(context).bloc.onAddChildReaction(
                 //       kind: "comment",
                 //       activity: activity,
@@ -684,23 +706,57 @@ class FrameComment extends StatelessWidget {
               onPressed: () {
                 print("like");
                 FeedProvider.of(context).bloc.onAddChildReaction(
-                    kind: 'like', reaction: reaction, activity: activity);
+                    kind: 'like',
+                    reaction: widget.reaction,
+                    activity: widget.activity);
               },
               icon: Icon(
                 Icons.thumb_up_outlined,
                 size: 12,
               ),
-            )
+            ),
+            if (showTextField)
+              SizedBox(
+                  width: 150,
+                  child: TextField(
+                    onSubmitted: (text) async {
+                      print("sending");
+                      await FeedProvider.of(context).bloc.onAddChildReaction(
+                        kind: "comment",
+                        reaction: widget.reaction,
+                        activity: widget.activity,
+                        data: {
+                          "text": text, //_
+                        },
+                      );
+                    },
+                  )),
           ],
-        )
+        ),
+        Row(
+          // mainAxisAlignment: MainAxisAlignment.end,
+          children: [
+            SizedBox(
+              width: 40,
+            ),
+            Expanded(
+              child: CommentListView(
+                key: Key("${widget.reaction.id}_comments"),
+                activity: widget.activity,
+                lookupAttr: LookupAttribute.reactionId,
+                lookupValue: widget.reaction.id!,
+              ),
+            ),
+          ],
+        ),
       ],
     );
   }
 
-  String get timestampConverted {
-    final duration = Duration(seconds: timestamp);
-    return convertDuration(duration);
-  }
+  // String get timestampConverted {
+  //   final duration = Duration(seconds: widget.timestamp);
+  //   return convertDuration(duration);
+  // }
 }
 
 class FrameAvatar extends StatelessWidget {
@@ -716,7 +772,7 @@ class FrameAvatar extends StatelessWidget {
         backgroundImage: NetworkImage(
           url,
         ),
-        radius: 18);
+        radius: 14);
   }
 }
 
