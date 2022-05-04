@@ -550,7 +550,8 @@ class CommentListView extends StatelessWidget {
     return ReactionListCore(
       lookupValue: lookupValue,
       lookupAttr: lookupAttr,
-      flags: EnrichmentFlags().withOwnChildren(),
+      kind: 'comment',
+      flags: EnrichmentFlags().withOwnChildren().withOwnReactions(),
       loadingBuilder: (context) => const Center(
         child: CircularProgressIndicator(),
       ),
@@ -618,6 +619,9 @@ class _FrameCommentState extends State<FrameComment> {
   final replyController = TextEditingController();
   @override
   Widget build(BuildContext context) {
+    final isLikedByUser =
+        (widget.reaction.ownChildren?['like']?.length ?? 0) > 0;
+
     return Column(
       children: [
         Padding(
@@ -682,15 +686,23 @@ class _FrameCommentState extends State<FrameComment> {
             IconButton(
               onPressed: () {
                 print("like");
-                FeedProvider.of(context).bloc.onAddChildReaction(
-                    kind: 'like',
-                    reaction: widget.reaction,
-                    activity: widget.activity);
+                if (isLikedByUser) {
+                  FeedProvider.of(context).bloc.onRemoveChildReaction(
+                        kind: 'like',
+                        childReaction: widget.reaction.ownChildren!['like']![0],
+                        activity: widget.activity,
+                        parentReaction: widget.reaction,
+                      );
+                } else {
+                  FeedProvider.of(context).bloc.onAddChildReaction(
+                      kind: 'like',
+                      reaction: widget.reaction,
+                      activity: widget.activity);
+                }
               },
-              icon: Icon(
-                Icons.thumb_up_outlined,
-                size: 12,
-              ),
+              icon: isLikedByUser
+                  ? const Icon(Icons.thumb_up, size: 14)
+                  : const Icon(Icons.thumb_up_outlined, size: 14),
             ),
             if (showTextField) ReplyTextField(replyController: replyController),
             if (showTextField)
@@ -803,7 +815,17 @@ Future<void> main() async {
   );
   final feedGroup =
       'video_timeline'; //or maybe we could call this something more meaningful like video_feed
-
+  // client.flatFeed('video_timeline').addActivity(Activity(
+  //     verb: "add",
+  //     extraData: {
+  //       "description": "this is a description",
+  //       "project_name": "streamagram.mov",
+  //       "video_url":
+  //           "https://assets.mixkit.co/videos/preview/mixkit-daytime-city-traffic-aerial-view-56-large.mp4",
+  //     },
+  //     actor: client.currentUser!.ref,
+  //     object: "video",
+  //     time: DateTime.now()));
   runApp(
     StreamFrame(
       client: client,
