@@ -519,18 +519,6 @@ class CommentSectionCard extends StatelessWidget {
                             "text": textController.text, //_
                           },
                         );
-
-                        //                     Reaction(
-                        //   user: User(data: {
-                        //     "full_name": "Gordon Hayes",
-                        //     "profile_image": "https://i.pravatar.cc/300"
-                        //   }),
-                        //   data: {
-                        //     "timestamp": 12,
-                        //     "text": "Need to fix weird animation thing here",
-                        //   },
-                        //   createdAt: DateTime(2022, 04, 02),
-                        // )
                       },
                       child: Text("Send")),
                 )
@@ -627,6 +615,7 @@ class FrameComment extends StatefulWidget {
 
 class _FrameCommentState extends State<FrameComment> {
   bool showTextField = false;
+  final replyController = TextEditingController();
   @override
   Widget build(BuildContext context) {
     return Column(
@@ -684,18 +673,6 @@ class _FrameCommentState extends State<FrameComment> {
                 setState(() {
                   showTextField = !showTextField;
                 });
-                // FeedProvider.of(context).bloc.onAddChildReaction(
-                //       kind: "comment",
-                //       activity: activity,
-                //       data: {
-                //         "timestamp": 12, //TODO: unhardcode this
-                //         "text": replyController.text, //_
-                //       },
-                //       reaction: reaction,
-                //     );
-                print("reply");
-                //TODOs: - onAddChildReaction comment
-                //      - toggle TextField
               },
               child: Text(
                 "Reply",
@@ -715,22 +692,25 @@ class _FrameCommentState extends State<FrameComment> {
                 size: 12,
               ),
             ),
+            if (showTextField) ReplyTextField(replyController: replyController),
             if (showTextField)
-              SizedBox(
-                  width: 150,
-                  child: TextField(
-                    onSubmitted: (text) async {
-                      print("sending");
-                      await FeedProvider.of(context).bloc.onAddChildReaction(
-                        kind: "comment",
-                        reaction: widget.reaction,
-                        activity: widget.activity,
-                        data: {
-                          "text": text, //_
-                        },
-                      );
+              IconButton(
+                icon: Icon(
+                  Icons.send,
+                  size: 12,
+                ),
+                onPressed: () async {
+                  await FeedProvider.of(context).bloc.onAddChildReaction(
+                    kind: "comment",
+                    reaction: widget.reaction,
+                    activity: widget.activity,
+                    data: {
+                      "text": replyController.text, //_
                     },
-                  )),
+                  );
+                  replyController.clear();
+                },
+              )
           ],
         ),
         Row(
@@ -752,11 +732,21 @@ class _FrameCommentState extends State<FrameComment> {
       ],
     );
   }
+}
 
-  // String get timestampConverted {
-  //   final duration = Duration(seconds: widget.timestamp);
-  //   return convertDuration(duration);
-  // }
+class ReplyTextField extends StatelessWidget {
+  const ReplyTextField({Key? key, required this.replyController})
+      : super(key: key);
+  final TextEditingController replyController;
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+        width: 150,
+        child: TextField(
+          controller: replyController,
+        ));
+  }
 }
 
 class FrameAvatar extends StatelessWidget {
