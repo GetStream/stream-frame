@@ -315,7 +315,6 @@ class ReviewProject extends StatefulWidget {
 class _ReviewProjectState extends State<ReviewProject> {
   late VideoPlayerController _videoPlayerController1;
   ChewieController? _chewieController;
-  final textController = TextEditingController();
   @override
   void initState() {
     super.initState();
@@ -386,7 +385,9 @@ class _ReviewProjectState extends State<ReviewProject> {
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
-          Expanded(
+          SizedBox(
+            width: double.maxFinite,
+            height: 100,
             child: _chewieController != null &&
                     _chewieController!.videoPlayerController.value.isInitialized
                 ? Chewie(
@@ -434,91 +435,103 @@ class _ReviewProjectState extends State<ReviewProject> {
             activity: widget.activity,
             chewieController: _chewieController,
           ),
-          Spacer(),
+          // Spacer(),
           Padding(
             padding: const EdgeInsets.all(8.0),
-            child: Card(
-              child: Column(
-                children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.end,
+            child: CommentSectionCard(activity: widget.activity),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class CommentSectionCard extends StatelessWidget {
+  const CommentSectionCard({Key? key, required this.activity})
+      : super(key: key);
+  final EnrichedActivity activity;
+
+  @override
+  Widget build(BuildContext context) {
+    final textController = TextEditingController();
+    return Card(
+      child: Column(
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.end,
+            children: [
+              Padding(
+                padding: const EdgeInsets.all(8.0),
+                child: FrameAvatar(
+                    url: FeedProvider.of(context)
+                            .bloc
+                            .currentUser!
+                            .data?["profile_image"] as String? ??
+                        "https://i.pravatar.cc/300"),
+              ),
+              Flexible(
+                child: Padding(
+                  padding: const EdgeInsets.all(8.0),
+                  child: TextField(
+                      controller: textController,
+                      decoration: InputDecoration.collapsed(
+                        hintText: "Leave your comment here",
+                      )),
+                ),
+              ),
+            ],
+          ),
+          Padding(
+            padding: const EdgeInsets.all(8.0),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Padding(
+                  padding: const EdgeInsets.all(8.0),
+                  child: Row(
                     children: [
-                      Padding(
-                        padding: const EdgeInsets.all(8.0),
-                        child: FrameAvatar(
-                            url: FeedProvider.of(context)
-                                    .bloc
-                                    .currentUser!
-                                    .data?["profile_image"] as String? ??
-                                "https://i.pravatar.cc/300"),
+                      Icon(Icons.timer),
+                      SizedBox(
+                        width: 12,
                       ),
-                      Flexible(
-                        child: Padding(
-                          padding: const EdgeInsets.all(8.0),
-                          child: TextField(
-                              controller: textController,
-                              decoration: InputDecoration.collapsed(
-                                hintText: "Leave your comment here",
-                              )),
-                        ),
-                      ),
+                      //TODO: update this value continuously (in a performant way) from
+                      // _chewieController!.videoPlayerController.value.position
+                      //save it in a field so it's usable by as timestamp param for
+                      //onAddReaction
+                      Text(convertDuration(Duration(seconds: 2))),
                     ],
                   ),
-                  Padding(
-                    padding: const EdgeInsets.all(8.0),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Padding(
-                          padding: const EdgeInsets.all(8.0),
-                          child: Row(
-                            children: [
-                              Icon(Icons.timer),
-                              SizedBox(
-                                width: 12,
-                              ),
-                              //TODO: update this value continuously (in a performant way) from
-                              // _chewieController!.videoPlayerController.value.position
-                              //save it in a field so it's usable by as timestamp param for
-                              //onAddReaction
-                              Text(convertDuration(Duration(seconds: 2))),
-                            ],
-                          ),
-                        ),
-                        Container(
-                          child: TextButton(
-                              onPressed: () {
-                                FeedProvider.of(context).bloc.onAddReaction(
-                                  kind: "comment",
-                                  activity: widget.activity,
-                                  feedGroup: 'video_timeline',
-                                  data: {
-                                    "timestamp": 12, //TODO: unhardcode this
-                                    "text": textController.text, //_
-                                  },
-                                );
+                ),
+                Container(
+                  child: TextButton(
+                      onPressed: () {
+                        FeedProvider.of(context).bloc.onAddReaction(
+                          kind: "comment",
+                          activity: activity,
+                          feedGroup: 'video_timeline',
+                          data: {
+                            "timestamp": 12, //TODO: unhardcode this
+                            "text": textController.text, //_
+                          },
+                        );
 
-                                //                     Reaction(
-                                //   user: User(data: {
-                                //     "full_name": "Gordon Hayes",
-                                //     "profile_image": "https://i.pravatar.cc/300"
-                                //   }),
-                                //   data: {
-                                //     "timestamp": 12,
-                                //     "text": "Need to fix weird animation thing here",
-                                //   },
-                                //   createdAt: DateTime(2022, 04, 02),
-                                // )
-                              },
-                              child: Text("Send")),
-                        )
-                      ],
-                    ),
-                  ) //convertDuration(position)
-                ],
-              ),
+                        //                     Reaction(
+                        //   user: User(data: {
+                        //     "full_name": "Gordon Hayes",
+                        //     "profile_image": "https://i.pravatar.cc/300"
+                        //   }),
+                        //   data: {
+                        //     "timestamp": 12,
+                        //     "text": "Need to fix weird animation thing here",
+                        //   },
+                        //   createdAt: DateTime(2022, 04, 02),
+                        // )
+                      },
+                      child: Text("Send")),
+                )
+              ],
             ),
-          ),
+          ) //convertDuration(position)
         ],
       ),
     );
@@ -537,37 +550,40 @@ class CommentListView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ReactionListCore(
-      lookupValue: activity.id!,
-      loadingBuilder: (context) => const Center(
-        child: CircularProgressIndicator(),
-      ),
-      emptyBuilder: (context) => Offstage(),
-      errorBuilder: (context, error) => Center(
-        child: Text(error.toString()),
-      ),
-      reactionsBuilder: (BuildContext context, List<Reaction> reactions) {
-        return ListView.builder(
-            scrollDirection: Axis.vertical,
-            shrinkWrap: true,
-            itemCount: reactions.length,
-            itemBuilder: (context, index) => FrameComment(
-                reaction: reactions[index],
-                activity: activity,
-                username: reactions[index].user!.data!['full_name']
-                    as String, //"Gordon Hayes",
-                avatarUrl: reactions[index].user!.data!['profile_image']
-                        as String? ??
-                    "https://i.pravatar.cc/300", //"https://i.pravatar.cc/300"
-                timestamp: reactions[index].data!["timestamp"] as int, //12
-                text: reactions[index].data!["text"]
-                    as String, // "Need to fix weird animation thing here"
-                date: reactions[index].createdAt!, // DateTime(2022, 04, 02),
+    return Expanded(
+      child: ReactionListCore(
+        lookupValue: activity.id!,
+        loadingBuilder: (context) => const Center(
+          child: CircularProgressIndicator(),
+        ),
+        emptyBuilder: (context) => Offstage(),
+        errorBuilder: (context, error) => Center(
+          child: Text(error.toString()),
+        ),
+        reactionsBuilder: (BuildContext context, List<Reaction> reactions) {
+          return ListView.builder(
+              scrollDirection: Axis.vertical,
+              shrinkWrap: true,
+              reverse: true,
+              itemCount: reactions.length,
+              itemBuilder: (context, index) => FrameComment(
+                  reaction: reactions[index],
+                  activity: activity,
+                  username: reactions[index].user!.data!['full_name']
+                      as String, //"Gordon Hayes",
+                  avatarUrl: reactions[index].user!.data!['profile_image']
+                          as String? ??
+                      "https://i.pravatar.cc/300", //"https://i.pravatar.cc/300"
+                  timestamp: reactions[index].data!["timestamp"] as int, //12
+                  text: reactions[index].data!["text"]
+                      as String, // "Need to fix weird animation thing here"
+                  date: reactions[index].createdAt!, // DateTime(2022, 04, 02),
 
-                onSeekTo: (int timestamp) {
-                  _chewieController!.seekTo(Duration(seconds: timestamp));
-                }));
-      },
+                  onSeekTo: (int timestamp) {
+                    _chewieController!.seekTo(Duration(seconds: timestamp));
+                  }));
+        },
+      ),
     );
   }
 }
