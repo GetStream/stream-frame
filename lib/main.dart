@@ -156,23 +156,24 @@ class NewProjectDialog extends StatelessWidget {
         ),
       ),
       TextButton(
-          onPressed: () {
-            print("Creating project");
-            final client = FeedProvider.of(context).bloc.client;
+        child: Text("Create"),
+        onPressed: () {
+          print("Creating project");
+          final client = FeedProvider.of(context).bloc.client;
 
-            client.flatFeed('video_timeline').addActivity(Activity(
-                verb: "add",
-                extraData: {
-                  "description": projectDescController.text,
-                  "project_name": projectNameController.text,
-                  "video_url":
-                      uploadController.getMediaUris()!.first.uri.toString(),
-                },
-                actor: client.currentUser!.ref,
-                object: "video",
-                time: DateTime.now()));
-          },
-          child: Text("Create"))
+          client.flatFeed('video_timeline').addActivity(Activity(
+              verb: "add",
+              extraData: {
+                "description": projectDescController.text,
+                "project_name": projectNameController.text,
+                "video_url":
+                    uploadController.getMediaUris()!.first.uri.toString(),
+              },
+              actor: client.currentUser!.ref,
+              object: "video",
+              time: DateTime.now()));
+        },
+      )
     ]);
   }
 }
@@ -187,6 +188,7 @@ class UploadFileButton extends StatelessWidget {
     return Row(
       children: [
         IconButton(
+          icon: const Icon(Icons.file_copy),
           onPressed: () async {
             final ImagePicker _picker = ImagePicker();
             final XFile? video = await _picker.pickVideo(
@@ -203,7 +205,6 @@ class UploadFileButton extends StatelessWidget {
                   .showSnackBar(const SnackBar(content: Text('Cancelled')));
             }
           },
-          icon: const Icon(Icons.file_copy),
         ),
         Text(
           'Add a video',
@@ -513,19 +514,20 @@ class CommentSectionCard extends StatelessWidget {
                 ),
                 Container(
                   child: TextButton(
-                      onPressed: () {
-                        FeedProvider.of(context).bloc.onAddReaction(
-                          kind: "comment",
-                          activity: activity,
-                          feedGroup: 'video_timeline',
-                          data: {
-                            "timestamp": 12, //TODO: unhardcode this
-                            "text": textController.text, //_
-                          },
-                        );
-                        textController.clear();
-                      },
-                      child: Text("Send")),
+                    child: Text("Send"),
+                    onPressed: () {
+                      FeedProvider.of(context).bloc.onAddReaction(
+                        kind: "comment",
+                        activity: activity,
+                        feedGroup: 'video_timeline',
+                        data: {
+                          "timestamp": 12, //TODO: unhardcode this
+                          "text": textController.text, //_
+                        },
+                      );
+                      textController.clear();
+                    },
+                  ),
                 )
               ],
             ),
@@ -631,7 +633,9 @@ class FrameComment extends StatefulWidget {
 
 class _FrameCommentState extends State<FrameComment> {
   bool showTextField = false;
+  bool displayReplies = false;
   final replyController = TextEditingController();
+  
   @override
   Widget build(BuildContext context) {
     final isLikedByUser =
@@ -692,20 +696,11 @@ class _FrameCommentState extends State<FrameComment> {
         Row(
           mainAxisAlignment: MainAxisAlignment.start,
           children: [
-            TextButton(
-              onPressed: () {
-                setState(() {
-                  showTextField = !showTextField;
-                });
-              },
-              child: Text(
-                "Reply",
-                style: TextStyle(fontSize: 14),
-              ),
-            ),
             IconButton(
+              icon: isLikedByUser
+                  ? const Icon(Icons.thumb_up, size: 14)
+                  : const Icon(Icons.thumb_up_outlined, size: 14),
               onPressed: () {
-                print("like");
                 if (isLikedByUser) {
                   FeedProvider.of(context).bloc.onRemoveChildReaction(
                         kind: 'like',
@@ -725,9 +720,6 @@ class _FrameCommentState extends State<FrameComment> {
                       );
                 }
               },
-              icon: isLikedByUser
-                  ? const Icon(Icons.thumb_up, size: 14)
-                  : const Icon(Icons.thumb_up_outlined, size: 14),
             ),
             if (widget.reaction.childrenCounts?['like'] != null &&
                 widget.reaction.childrenCounts!['like']!.toInt() > 0)
@@ -735,6 +727,17 @@ class _FrameCommentState extends State<FrameComment> {
                 widget.reaction.childrenCounts!['like'].toString(),
                 style: TextStyle(fontSize: 14),
               ),
+            TextButton(
+              child: Text(
+                "Reply",
+                style: TextStyle(fontSize: 14),
+              ),
+              onPressed: () {
+                setState(() {
+                  showTextField = !showTextField;
+                });
+              },
+            ),
             if (showTextField)
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 8.0),
@@ -762,22 +765,36 @@ class _FrameCommentState extends State<FrameComment> {
               )
           ],
         ),
-        Row(
-          // mainAxisAlignment: MainAxisAlignment.end,
-          children: [
-            SizedBox(
-              width: 40,
+        if (widget.reaction.childrenCounts?['comment'] != null &&
+            widget.reaction.childrenCounts!['comment']! > 0)
+          TextButton(
+            child: Text(
+              "${displayReplies ? 'Hide' : 'View'} ${widget.reaction.childrenCounts!['comment']!} replies",
+              style: TextStyle(color: Colors.blue),
             ),
-            Expanded(
-              child: CommentListView(
-                key: Key("${widget.reaction.id}_comments"),
-                activity: widget.activity,
-                lookupAttr: LookupAttribute.reactionId,
-                lookupValue: widget.reaction.id!,
+            onPressed: () {
+              setState(() {
+                displayReplies = !displayReplies;
+              });
+            },
+          ),
+        if (displayReplies)
+          Row(
+            // mainAxisAlignment: MainAxisAlignment.end,
+            children: [
+              SizedBox(
+                width: 40,
               ),
-            ),
-          ],
-        ),
+              Expanded(
+                child: CommentListView(
+                  key: Key("${widget.reaction.id}_comments"),
+                  activity: widget.activity,
+                  lookupAttr: LookupAttribute.reactionId,
+                  lookupValue: widget.reaction.id!,
+                ),
+              ),
+            ],
+          ),
       ],
     );
   }
