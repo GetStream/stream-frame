@@ -31,7 +31,10 @@ dependencies:
     sdk: flutter
   chewie: ^1.3.2
   timeago: ^3.2.2
-  stream_feed_flutter_core: ^0.7.0+1
+  stream_feed_flutter_core:
+    path: /Users/sachaarbonel/flutter-dev/stream-feed-flutter/packages/stream_feed_flutter_core
+
+  # stream_feed_flutter_core: ^0.7.0+1
   image_picker: ^0.8.5
 
   # The following adds the Cupertino Icons font to your application.

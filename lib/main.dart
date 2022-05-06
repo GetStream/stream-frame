@@ -71,9 +71,7 @@ class Projects extends StatelessWidget {
           child: Text(error.toString()),
         ),
         limit: 10,
-        flags: EnrichmentFlags()
-          ..withReactionCounts()
-          ..withOwnReactions(),
+        flags: EnrichmentFlags().withReactionCounts().withOwnReactions(),
         feedBuilder: (context, activities) {
           return GridView.builder(
             itemCount: activities.length,
@@ -265,14 +263,20 @@ class ProjectPreview extends StatelessWidget {
                 Text(
                   authorName,
                 ),
-                Row(
-                  children: [
-                    Icon(
-                      Icons.comment_rounded,
-                      size: 14,
-                    ),
-                    Text("$commentNumber"),
-                  ],
+                Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 2.0),
+                  child: Row(
+                    children: [
+                      Icon(
+                        Icons.comment_rounded,
+                        size: 14,
+                      ),
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 8.0),
+                        child: Text("$commentNumber"),
+                      ),
+                    ],
+                  ),
                 )
               ],
             )
@@ -519,6 +523,7 @@ class CommentSectionCard extends StatelessWidget {
                             "text": textController.text, //_
                           },
                         );
+                        textController.clear();
                       },
                       child: Text("Send")),
                 )
@@ -551,7 +556,10 @@ class CommentListView extends StatelessWidget {
       lookupValue: lookupValue,
       lookupAttr: lookupAttr,
       kind: 'comment',
-      flags: EnrichmentFlags().withOwnChildren().withOwnReactions(),
+      flags: EnrichmentFlags()
+          .withOwnChildren()
+          .withOwnReactions()
+          .withReactionCounts(),
       loadingBuilder: (context) => const Center(
         child: CircularProgressIndicator(),
       ),
@@ -567,6 +575,9 @@ class CommentListView extends StatelessWidget {
             reverse: true,
             itemCount: reactions.length,
             itemBuilder: (context, index) => FrameComment(
+                key: ValueKey('reaction-${reactions[index].id}'),
+                lookupValue: lookupValue,
+                lookupAttr: lookupAttr,
                 reaction: reactions[index],
                 activity: activity,
                 username: reactions[index].user!.data!['full_name']
@@ -600,7 +611,10 @@ class FrameComment extends StatefulWidget {
     required this.avatarUrl,
     required this.reaction,
     required this.activity,
+    required this.lookupValue,
+    required this.lookupAttr,
   }) : super(key: key);
+  final LookupAttribute lookupAttr;
   final Reaction reaction;
   final EnrichedActivity activity;
   final int? timestamp;
@@ -608,6 +622,7 @@ class FrameComment extends StatefulWidget {
   final String text;
   final String username;
   final String avatarUrl;
+  final String lookupValue;
   final void Function(int timestamp)? onSeekTo;
 
   @override
@@ -649,28 +664,33 @@ class _FrameCommentState extends State<FrameComment> {
         Row(
           mainAxisAlignment: MainAxisAlignment.start,
           children: [
-            if (widget.onSeekTo != null)
-              GestureDetector(
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: 8.0, vertical: 12.0),
-                  child: Text(
-                    convertDuration(Duration(seconds: widget.timestamp!)),
-                    style: TextStyle(
-                      color: Colors.blue,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 13,
+            widget.onSeekTo != null
+                ? GestureDetector(
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 8.0, vertical: 12.0),
+                      child: Text(
+                        widget.timestamp != null
+                            ? convertDuration(
+                                Duration(seconds: widget.timestamp!))
+                            : "",
+                        style: TextStyle(
+                          color: Colors.blue,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 13,
+                        ),
+                      ),
                     ),
-                  ),
-                ),
-                onTap: () {
-                  widget.onSeekTo!(widget.timestamp!);
-                },
-              ),
+                    onTap: () {
+                      widget.onSeekTo!(widget.timestamp!);
+                    },
+                  )
+                : SizedBox(width: 45),
             Text(widget.text),
           ],
         ),
         Row(
+          mainAxisAlignment: MainAxisAlignment.start,
           children: [
             TextButton(
               onPressed: () {
@@ -689,22 +709,37 @@ class _FrameCommentState extends State<FrameComment> {
                 if (isLikedByUser) {
                   FeedProvider.of(context).bloc.onRemoveChildReaction(
                         kind: 'like',
+                        lookupValue: widget.lookupValue,
+                        lookupAttr: widget.lookupAttr,
                         childReaction: widget.reaction.ownChildren!['like']![0],
                         activity: widget.activity,
                         parentReaction: widget.reaction,
                       );
                 } else {
                   FeedProvider.of(context).bloc.onAddChildReaction(
-                      kind: 'like',
-                      reaction: widget.reaction,
-                      activity: widget.activity);
+                        kind: 'like',
+                        lookupValue: widget.lookupValue,
+                        lookupAttr: widget.lookupAttr,
+                        reaction: widget.reaction,
+                        activity: widget.activity,
+                      );
                 }
               },
               icon: isLikedByUser
                   ? const Icon(Icons.thumb_up, size: 14)
                   : const Icon(Icons.thumb_up_outlined, size: 14),
             ),
-            if (showTextField) ReplyTextField(replyController: replyController),
+            if (widget.reaction.childrenCounts?['like'] != null &&
+                widget.reaction.childrenCounts!['like']!.toInt() > 0)
+              Text(
+                widget.reaction.childrenCounts!['like'].toString(),
+                style: TextStyle(fontSize: 14),
+              ),
+            if (showTextField)
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 8.0),
+                child: ReplyTextField(replyController: replyController),
+              ),
             if (showTextField)
               IconButton(
                 icon: Icon(
@@ -716,8 +751,10 @@ class _FrameCommentState extends State<FrameComment> {
                     kind: "comment",
                     reaction: widget.reaction,
                     activity: widget.activity,
+                    lookupAttr: widget.lookupAttr,
+                    lookupValue: widget.lookupValue,
                     data: {
-                      "text": replyController.text, //_
+                      "text": replyController.text,
                     },
                   );
                   replyController.clear();

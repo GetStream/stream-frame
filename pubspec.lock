@@ -367,16 +367,16 @@ packages:
   stream_feed:
     dependency: transitive
     description:
-      name: stream_feed
-      url: "https://pub.dartlang.org"
-    source: hosted
+      path: "../stream-feed-flutter/packages/stream_feed"
+      relative: true
+    source: path
     version: "0.5.2"
   stream_feed_flutter_core:
     dependency: "direct main"
     description:
-      name: stream_feed_flutter_core
-      url: "https://pub.dartlang.org"
-    source: hosted
+      path: "/Users/sachaarbonel/flutter-dev/stream-feed-flutter/packages/stream_feed_flutter_core"
+      relative: false
+    source: path
     version: "0.7.0+1"
   string_scanner:
     dependency: transitive
