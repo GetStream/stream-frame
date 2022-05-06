@@ -591,7 +591,10 @@ class CommentListView extends StatelessWidget {
                 text: reactions[index].data!["text"]
                     as String, // "Need to fix weird animation thing here"
                 date: reactions[index].createdAt!, // DateTime(2022, 04, 02),
-
+                numberOfComments: reactions[index].childrenCounts?['comment'],
+                isLikedByUser:
+                    (reactions[index].ownChildren?['like']?.length ?? 0) > 0,
+                numberOfLikes: reactions[index].childrenCounts?['like'],
                 onSeekTo: _chewieController != null
                     ? (int timestamp) {
                         _chewieController?.seekTo(Duration(seconds: timestamp));
@@ -615,6 +618,9 @@ class FrameComment extends StatefulWidget {
     required this.activity,
     required this.lookupValue,
     required this.lookupAttr,
+    required this.numberOfLikes,
+    required this.isLikedByUser,
+    required this.numberOfComments,
   }) : super(key: key);
   final LookupAttribute lookupAttr;
   final Reaction reaction;
@@ -624,7 +630,10 @@ class FrameComment extends StatefulWidget {
   final String text;
   final String username;
   final String avatarUrl;
+  final int? numberOfLikes;
+  final int? numberOfComments;
   final String lookupValue;
+  final bool isLikedByUser;
   final void Function(int timestamp)? onSeekTo;
 
   @override
@@ -635,12 +644,9 @@ class _FrameCommentState extends State<FrameComment> {
   bool showTextField = false;
   bool displayReplies = false;
   final replyController = TextEditingController();
-  
+
   @override
   Widget build(BuildContext context) {
-    final isLikedByUser =
-        (widget.reaction.ownChildren?['like']?.length ?? 0) > 0;
-
     return Column(
       children: [
         Padding(
@@ -697,11 +703,11 @@ class _FrameCommentState extends State<FrameComment> {
           mainAxisAlignment: MainAxisAlignment.start,
           children: [
             IconButton(
-              icon: isLikedByUser
+              icon: widget.isLikedByUser
                   ? const Icon(Icons.thumb_up, size: 14)
                   : const Icon(Icons.thumb_up_outlined, size: 14),
               onPressed: () {
-                if (isLikedByUser) {
+                if (widget.isLikedByUser) {
                   FeedProvider.of(context).bloc.onRemoveChildReaction(
                         kind: 'like',
                         lookupValue: widget.lookupValue,
@@ -721,10 +727,9 @@ class _FrameCommentState extends State<FrameComment> {
                 }
               },
             ),
-            if (widget.reaction.childrenCounts?['like'] != null &&
-                widget.reaction.childrenCounts!['like']!.toInt() > 0)
+            if (widget.numberOfLikes != null && widget.numberOfLikes! > 0)
               Text(
-                widget.reaction.childrenCounts!['like'].toString(),
+                widget.numberOfLikes!.toString(),
                 style: TextStyle(fontSize: 14),
               ),
             TextButton(
@@ -765,11 +770,10 @@ class _FrameCommentState extends State<FrameComment> {
               )
           ],
         ),
-        if (widget.reaction.childrenCounts?['comment'] != null &&
-            widget.reaction.childrenCounts!['comment']! > 0)
+        if (widget.numberOfComments != null && widget.numberOfComments! > 0)
           TextButton(
             child: Text(
-              "${displayReplies ? 'Hide' : 'View'} ${widget.reaction.childrenCounts!['comment']!} replies",
+              "${displayReplies ? 'Hide' : 'View'} ${widget.numberOfComments!} replies",
               style: TextStyle(color: Colors.blue),
             ),
             onPressed: () {
