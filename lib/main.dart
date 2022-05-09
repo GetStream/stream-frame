@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:chewie/chewie.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
@@ -132,46 +134,51 @@ class NewProjectDialog extends StatelessWidget {
               const Center(child: CircularProgressIndicator()),
           uploadsErrorBuilder: (error) => Center(child: Text(error.toString())),
           uploadsBuilder: (context, uploads) {
-            return SizedBox(
-              height: 100,
-              child: ListView.separated(
-                separatorBuilder: (context, index) => const Divider(),
-                shrinkWrap: true,
-                scrollDirection: Axis.horizontal,
-                itemCount: uploads.length,
-                itemBuilder: (context, index) => FileUploadStateWidget(
-                    fileState: uploads[index],
-                    onRemoveUpload: (attachment) {
-                      return uploadController.removeUpload(attachment);
-                    },
-                    onCancelUpload: (attachment) {
-                      uploadController.cancelUpload(attachment);
-                    },
-                    onRetryUpload: (attachment) async {
-                      return uploadController.uploadImage(attachment);
-                    }),
-              ),
-            );
+            return uploads.isNotEmpty
+                ? SizedBox(
+                    width: double.maxFinite,
+                    height: 200,
+                    child: FileUploadStateWidget(
+                        fileState: uploads.first,
+                        mediaPreviewBuilder: (file, mediaType) {
+                          if (mediaType == MediaType.video) {
+                            return VideoPreview(file);
+                          }
+                          throw UnsupportedError('Unsupported media type');
+                        },
+                        onRemoveUpload: (attachment) {
+                          return uploadController.removeUpload(attachment);
+                        },
+                        onCancelUpload: (attachment) {
+                          uploadController.cancelUpload(attachment);
+                        },
+                        onRetryUpload: (attachment) async {
+                          return uploadController.uploadImage(attachment);
+                        }),
+                  )
+                : SizedBox.shrink();
           },
         ),
       ),
       TextButton(
         child: Text("Create"),
-        onPressed: () {
+        onPressed: () async {
           print("Creating project");
           final client = FeedProvider.of(context).bloc.client;
-
-          client.flatFeed('video_timeline').addActivity(Activity(
+          final video_url =
+              uploadController.getMediaUris()!.first.uri.toString();
+          print("video_url $video_url");
+          await FeedProvider.of(context).bloc.onAddActivity(
+              feedGroup: 'video_timeline',
               verb: "add",
-              extraData: {
+              data: {
                 "description": projectDescController.text,
                 "project_name": projectNameController.text,
-                "video_url":
-                    uploadController.getMediaUris()!.first.uri.toString(),
+                "video_url": video_url,
               },
-              actor: client.currentUser!.ref,
-              object: "video",
-              time: DateTime.now()));
+              object: "video");
+          Navigator.of(context).popUntil((route) => route.isFirst);
+          Navigator.of(context).popUntil((route) => route.isFirst);
         },
       )
     ]);
@@ -895,4 +902,73 @@ String convertDuration(Duration timestamp) {
   final minutes = timestamp.inMinutes % 60;
   final seconds = timestamp.inSeconds % 60;
   return '$minutes:$seconds';
+}
+
+class VideoPreview extends StatefulWidget {
+  const VideoPreview(this.file, {Key? key}) : super(key: key);
+  final AttachmentFile file;
+
+  @override
+  State<VideoPreview> createState() => _VideoPreviewState();
+}
+
+class _VideoPreviewState extends State<VideoPreview> {
+  late VideoPlayerController _videoPlayerController;
+  ChewieController? _chewieController;
+  @override
+  void initState() {
+    super.initState();
+
+    initializePlayer();
+  }
+
+  @override
+  void dispose() {
+    _videoPlayerController.dispose();
+    _chewieController?.dispose();
+    super.dispose();
+  }
+
+  Future<void> initializePlayer() async {
+    _videoPlayerController =
+        VideoPlayerController.file(File(widget.file.path!));
+
+    await _videoPlayerController.initialize();
+    _createChewieController();
+    setState(() {});
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      semanticContainer: true,
+      clipBehavior: Clip.antiAliasWithSaveLayer,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(5),
+      ),
+      elevation: 5,
+      margin: const EdgeInsets.all(5),
+      child: _chewieController != null &&
+              _chewieController!.videoPlayerController.value.isInitialized
+          ? Chewie(
+              controller: _chewieController!,
+            )
+          : Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: const [
+                CircularProgressIndicator(),
+                SizedBox(height: 20),
+                Text('Loading'),
+              ],
+            ),
+    );
+  }
+
+  void _createChewieController() {
+    _chewieController = ChewieController(
+      videoPlayerController: _videoPlayerController,
+      autoPlay: true,
+      looping: true,
+    );
+  }
 }
