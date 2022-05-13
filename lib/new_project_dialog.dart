@@ -45,7 +45,7 @@ class NewProjectDialog extends StatelessWidget {
                         fileState: uploads.first,
                         mediaPreviewBuilder: (file, mediaType) {
                           if (mediaType == MediaType.video) {
-                            return VideoPreview(file);
+                            return VideoPreviewCard(file);
                           }
                           throw UnsupportedError('Unsupported media type');
                         },

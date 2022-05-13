@@ -73,15 +73,15 @@ class _VideoPositionIndicatorState extends State<VideoPositionIndicator> {
 }
 
 
-class VideoPreview extends StatefulWidget {
-  const VideoPreview(this.file, {Key? key}) : super(key: key);
+class VideoPreviewCard extends StatefulWidget {
+  const VideoPreviewCard(this.file, {Key? key}) : super(key: key);
   final AttachmentFile file;
 
   @override
-  State<VideoPreview> createState() => _VideoPreviewState();
+  State<VideoPreviewCard> createState() => _VideoPreviewCardState();
 }
 
-class _VideoPreviewState extends State<VideoPreview> {
+class _VideoPreviewCardState extends State<VideoPreviewCard> {
   late VideoPlayerController _videoPlayerController;
   ChewieController? _chewieController;
   @override
