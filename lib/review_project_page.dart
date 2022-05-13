@@ -4,6 +4,7 @@ import 'package:stream_feed_flutter_core/stream_feed_flutter_core.dart';
 import 'package:stream_frame/builders/reactions.dart';
 import 'package:stream_frame/comments.dart';
 import 'package:stream_frame/models.dart';
+import 'package:stream_frame/theme.dart';
 import 'package:stream_frame/utils.dart';
 import 'package:video_player/video_player.dart';
 
@@ -88,11 +89,13 @@ class _ReviewProjectPageState extends State<ReviewProjectPage> {
                 children: [
                   Text(widget.reviewProjectModel.authorName,
                       style: const TextStyle(
-                          color: Colors.grey, fontWeight: FontWeight.bold)),
+                          color: StreamAppColors.darkGrey,
+                          fontWeight: FontWeight.bold)),
                   Text(
                       " uploaded ${formatPublishedDate(widget.reviewProjectModel.publishedDate)}",
                       style: const TextStyle(
-                          color: Colors.grey, fontWeight: FontWeight.bold))
+                          color: StreamAppColors.darkGrey,
+                          fontWeight: FontWeight.bold))
                 ],
               ),
             ),
@@ -100,7 +103,7 @@ class _ReviewProjectPageState extends State<ReviewProjectPage> {
               padding: const EdgeInsets.symmetric(horizontal: 8.0),
               child: Text(
                 widget.reviewProjectModel.description,
-                style: const TextStyle(color: Colors.grey),
+                style: const TextStyle(color: StreamAppColors.darkGrey),
               ),
             ),
             Padding(

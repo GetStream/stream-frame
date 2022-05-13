@@ -4,6 +4,7 @@ import 'package:stream_feed_flutter_core/stream_feed_flutter_core.dart';
 import 'package:stream_frame/avatar.dart';
 import 'package:stream_frame/builders/reactions.dart';
 import 'package:stream_frame/models.dart';
+import 'package:stream_frame/theme.dart';
 import 'package:stream_frame/utils.dart';
 import 'package:stream_frame/video.dart';
 import 'package:video_player/video_player.dart';
@@ -223,7 +224,7 @@ class _FrameCommentState extends State<FrameComment> {
                                 seconds: widget.commentModel.timestamp!))
                             : "",
                         style: const TextStyle(
-                          color: Colors.blue,
+                          color: StreamAppColors.blue,
                           fontWeight: FontWeight.bold,
                           fontSize: 13,
                         ),
@@ -289,7 +290,7 @@ class _FrameCommentState extends State<FrameComment> {
           TextButton(
             child: Text(
               "${displayReplies ? 'Hide' : 'View'} ${widget.commentModel.numberOfComments!} replies",
-              style: const TextStyle(color: Colors.blue),
+              style: const TextStyle(color: StreamAppColors.blue),
             ),
             onPressed: () {
               setState(() {
