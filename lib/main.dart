@@ -49,46 +49,19 @@ class Projects extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      floatingActionButton: FloatingActionButton(
-          onPressed: () {
-            Navigator.of(context).restorablePush(_dialogBuilder);
-          },
-          child: const Icon(
-            Icons.add,
-          )),
-      appBar: AppBar(
-        title: const Text(
-          "Stream Frame",
+        floatingActionButton: FloatingActionButton(
+            onPressed: () {
+              Navigator.of(context).restorablePush(_dialogBuilder);
+            },
+            child: const Icon(
+              Icons.add,
+            )),
+        appBar: AppBar(
+          title: const Text(
+            "Stream Frame",
+          ),
         ),
-      ),
-      body: FlatFeedCore(
-        feedGroup: 'video_timeline',
-        userId: FeedProvider.of(context).bloc.currentUser!.id,
-        loadingBuilder: (context) => const Center(
-          child: CircularProgressIndicator(),
-        ),
-        emptyBuilder: (context) =>
-            const Center(child: Text('No video to review')),
-        errorBuilder: (context, error) => Center(
-          child: Text(error.toString()),
-        ),
-        limit: 10,
-        flags: EnrichmentFlags().withReactionCounts().withOwnReactions(),
-        feedBuilder: (context, activities) {
-          return GridView.builder(
-            itemCount: activities.length,
-
-            //TODO: add a step in between (PreviewProject(commentNumber,preview?)) that Navigator.push to ReviewProject
-            itemBuilder: (context, index) => ProjectPreview(
-              activity: activities[index],
-            ),
-            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-              crossAxisCount: 2,
-            ),
-          );
-        },
-      ),
-    );
+        body: const ProjectPreviewBuilder());
   }
 
   static Route<Object?> _dialogBuilder(
@@ -96,6 +69,39 @@ class Projects extends StatelessWidget {
     return DialogRoute<void>(
       context: context,
       builder: (BuildContext context) => const NewProjectDialog(),
+    );
+  }
+}
+
+class ProjectPreviewBuilder extends StatelessWidget {
+  const ProjectPreviewBuilder({Key? key}) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    return FlatFeedCore(
+      feedGroup: 'video_timeline',
+      userId: FeedProvider.of(context).bloc.currentUser!.id,
+      loadingBuilder: (context) => const Center(
+        child: CircularProgressIndicator(),
+      ),
+      emptyBuilder: (context) =>
+          const Center(child: Text('No video to review')),
+      errorBuilder: (context, error) => Center(
+        child: Text(error.toString()),
+      ),
+      limit: 10,
+      flags: EnrichmentFlags().withReactionCounts().withOwnReactions(),
+      feedBuilder: (context, activities) {
+        return GridView.builder(
+          itemCount: activities.length,
+          itemBuilder: (context, index) => ProjectPreview(
+            reviewModel: ReviewProjectModel.fromActivity(activities[index]),
+          ),
+          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: 2,
+          ),
+        );
+      },
     );
   }
 }
@@ -224,19 +230,51 @@ class UploadFileButton extends StatelessWidget {
 String formatPublishedDate(DateTime publishedDate) =>
     timeago.format(publishedDate);
 
-class ProjectPreview extends StatelessWidget {
+class ReviewProjectModel {
   final EnrichedActivity activity;
-  const ProjectPreview({Key? key, required this.activity}) : super(key: key);
+  final int reactionCounts;
+  final String projectName;
+  final String authorName;
+  final DateTime publishedDate;
+  final String description;
+  final String videoUrl;
+  ReviewProjectModel({
+    required this.activity,
+    required this.reactionCounts,
+    required this.projectName,
+    required this.authorName,
+    required this.publishedDate,
+    required this.description,
+    required this.videoUrl,
+  });
+  factory ReviewProjectModel.fromActivity(EnrichedActivity activity) {
+    final projectName = activity.extraData!["project_name"] as String;
+    final reactionCounts = activity.reactionCounts?["comment"] ?? 0;
+    final authorName = activity.actor!.data!["full_name"] as String;
+    final publishedDate = activity.time!; //. DateTime(2022, 05, 02);
+    final videoUrl =
+        activity.extraData!['video_url'] as String; //"Gordon Hayes",
+    final description =
+        activity.extraData!["description"] as String; // "this is a descrption
+    return ReviewProjectModel(
+        activity: activity,
+        authorName: authorName,
+        description: description,
+        projectName: projectName,
+        publishedDate: publishedDate,
+        reactionCounts: reactionCounts,
+        videoUrl: videoUrl);
+  }
+}
+
+class ProjectPreview extends StatelessWidget {
+  final ReviewProjectModel reviewModel;
+  const ProjectPreview({Key? key, required this.reviewModel}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
-    final projectName = activity.extraData!["project_name"] as String;
-    final commentNumber = activity.reactionCounts?["comment"] ?? 0;
-    final authorName = activity.actor!.data!["full_name"] as String;
-    final publishedDate = activity.time!; //. DateTime(2022, 05, 02);
     return Card(
       semanticContainer: true,
-      // color: Colors.purple,
       clipBehavior: Clip.antiAliasWithSaveLayer,
       child: InkWell(
         onTap: () {
@@ -244,14 +282,8 @@ class ProjectPreview extends StatelessWidget {
               context,
               MaterialPageRoute(
                   builder: (context) => ReviewProject(
-                      activity: activity,
-                      reactionCounts: commentNumber,
-                      videoUrl: activity.extraData!['video_url'] as String,
-                      projectName: projectName, // "streamagram.mov",
-                      authorName: authorName, //"Gordon Hayes",
-                      description: activity.extraData!["description"]
-                          as String, // "this is a descrption",
-                      publishedDate: publishedDate)));
+                        reviewProjectModel: reviewModel,
+                      )));
         },
         child: Column(
           children: [
@@ -260,7 +292,7 @@ class ProjectPreview extends StatelessWidget {
               fit: BoxFit.fill,
             ),
             Text(
-              projectName,
+              reviewModel.projectName,
               style: const TextStyle(fontWeight: FontWeight.bold),
             ),
 
@@ -268,7 +300,7 @@ class ProjectPreview extends StatelessWidget {
               mainAxisAlignment: MainAxisAlignment.spaceAround,
               children: [
                 Text(
-                  authorName,
+                  reviewModel.authorName,
                 ),
                 Padding(
                   padding: const EdgeInsets.symmetric(vertical: 2.0),
@@ -280,7 +312,7 @@ class ProjectPreview extends StatelessWidget {
                       ),
                       Padding(
                         padding: const EdgeInsets.symmetric(horizontal: 8.0),
-                        child: Text("$commentNumber"),
+                        child: Text("${reviewModel.reactionCounts}"),
                       ),
                     ],
                   ),
@@ -302,23 +334,9 @@ class ProjectPreview extends StatelessWidget {
 }
 
 class ReviewProject extends StatefulWidget {
-  const ReviewProject({
-    Key? key,
-    required this.projectName,
-    required this.authorName,
-    required this.publishedDate,
-    required this.description,
-    required this.videoUrl,
-    required this.activity,
-    this.reactionCounts = 0,
-  }) : super(key: key);
-  final EnrichedActivity activity;
-  final int reactionCounts;
-  final String projectName;
-  final String authorName;
-  final DateTime publishedDate;
-  final String description;
-  final String videoUrl;
+  const ReviewProject({Key? key, required this.reviewProjectModel})
+      : super(key: key);
+  final ReviewProjectModel reviewProjectModel;
 
   @override
   State<ReviewProject> createState() => _ReviewProjectState();
@@ -342,7 +360,8 @@ class _ReviewProjectState extends State<ReviewProject> {
   }
 
   Future<void> initializePlayer() async {
-    _videoPlayerController1 = VideoPlayerController.network(widget.videoUrl);
+    _videoPlayerController1 =
+        VideoPlayerController.network(widget.reviewProjectModel.videoUrl);
 
     await _videoPlayerController1.initialize();
     _createChewieController();
@@ -391,7 +410,7 @@ class _ReviewProjectState extends State<ReviewProject> {
     return Scaffold(
       appBar: AppBar(
         title: Text(
-          widget.projectName,
+          widget.reviewProjectModel.projectName,
         ),
       ),
       body: Column(
@@ -416,17 +435,18 @@ class _ReviewProjectState extends State<ReviewProject> {
           ),
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 16),
-            child: Text(widget.projectName,
+            child: Text(widget.reviewProjectModel.projectName,
                 style: const TextStyle(fontWeight: FontWeight.bold)),
           ),
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 8.0),
             child: Row(
               children: [
-                Text(widget.authorName,
+                Text(widget.reviewProjectModel.authorName,
                     style: const TextStyle(
                         color: Colors.grey, fontWeight: FontWeight.bold)),
-                Text(" uploaded ${formatPublishedDate(widget.publishedDate)}",
+                Text(
+                    " uploaded ${formatPublishedDate(widget.reviewProjectModel.publishedDate)}",
                     style: const TextStyle(
                         color: Colors.grey, fontWeight: FontWeight.bold))
               ],
@@ -435,28 +455,42 @@ class _ReviewProjectState extends State<ReviewProject> {
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 8.0),
             child: Text(
-              widget.description,
+              widget.reviewProjectModel.description,
               style: const TextStyle(color: Colors.grey),
             ),
           ),
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 16),
-            child: Text("${widget.reactionCounts} Comments"),
+            child: Text("${widget.reviewProjectModel.reactionCounts} Comments"),
           ),
           Expanded(
-            child: CommentListView(
-              key: Key("${widget.activity.id}_comments"),
-              activity: widget.activity,
+            child: CommentListViewBuilder(
+              key: Key("${widget.reviewProjectModel.activity.id}_comments"),
               chewieController: _chewieController,
-              lookupValue: widget.activity.id!,
+              lookupValue: widget.reviewProjectModel.activity.id!,
             ),
           ),
           // Spacer(),
           Padding(
             padding: const EdgeInsets.all(8.0),
             child: CommentSectionCard(
-              activity: widget.activity,
+              userProfileImage: FeedProvider.of(context)
+                      .bloc
+                      .currentUser!
+                      .data?["profile_image"] as String? ??
+                  "https://i.pravatar.cc/300",
               videoPlayerController: _videoPlayerController1,
+              onComment: (timestamp, text) async {
+                await FeedProvider.of(context).bloc.onAddReaction(
+                  kind: "comment",
+                  activity: widget.reviewProjectModel.activity,
+                  feedGroup: 'video_timeline',
+                  data: {
+                    "timestamp": timestamp,
+                    "text": text,
+                  },
+                );
+              },
             ),
           ),
         ],
@@ -466,11 +500,15 @@ class _ReviewProjectState extends State<ReviewProject> {
 }
 
 class CommentSectionCard extends StatelessWidget {
-  const CommentSectionCard(
-      {Key? key, required this.activity, required this.videoPlayerController})
-      : super(key: key);
-  final EnrichedActivity activity;
+  const CommentSectionCard({
+    Key? key,
+    required this.videoPlayerController,
+    required this.userProfileImage,
+    required this.onComment,
+  }) : super(key: key);
   final VideoPlayerController videoPlayerController;
+  final String userProfileImage;
+  final Future<void> Function(int timestamp, String text) onComment;
 
   @override
   Widget build(BuildContext context) {
@@ -483,12 +521,7 @@ class CommentSectionCard extends StatelessWidget {
             children: [
               Padding(
                 padding: const EdgeInsets.all(8.0),
-                child: FrameAvatar(
-                    url: FeedProvider.of(context)
-                            .bloc
-                            .currentUser!
-                            .data?["profile_image"] as String? ??
-                        "https://i.pravatar.cc/300"),
+                child: FrameAvatar(url: userProfileImage),
               ),
               Flexible(
                 child: Padding(
@@ -511,44 +544,33 @@ class CommentSectionCard extends StatelessWidget {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 VideoPositionIndicator(videoPlayerController),
-                Container(
-                  child: TextButton(
-                    child: const Text("Send"),
-                    onPressed: () async {
-                      final timestamp = await videoPlayerController.position;
-                      await FeedProvider.of(context).bloc.onAddReaction(
-                        kind: "comment",
-                        activity: activity,
-                        feedGroup: 'video_timeline',
-                        data: {
-                          "timestamp":
-                              timestamp != null ? timestamp.inSeconds : 0,
-                          "text": textController.text, //_
-                        },
-                      );
-                      textController.clear();
-                    },
-                  ),
+                TextButton(
+                  child: const Text("Send"),
+                  onPressed: () async {
+                    final timestamp = await videoPlayerController.position;
+                    await onComment(timestamp != null ? timestamp.inSeconds : 0,
+                        textController.text);
+
+                    textController.clear();
+                  },
                 )
               ],
             ),
-          ) //convertDuration(position)
+          )
         ],
       ),
     );
   }
 }
 
-class CommentListView extends StatelessWidget {
-  const CommentListView(
+class CommentListViewBuilder extends StatelessWidget {
+  const CommentListViewBuilder(
       {Key? key,
       ChewieController? chewieController,
-      required this.activity,
       required this.lookupValue,
       this.lookupAttr = LookupAttribute.activityId})
       : _chewieController = chewieController,
         super(key: key);
-  final EnrichedActivity activity;
   final ChewieController? _chewieController;
   final LookupAttribute lookupAttr;
   final String lookupValue;
@@ -571,61 +593,90 @@ class CommentListView extends StatelessWidget {
         child: Text(error.toString()),
       ),
       reactionsBuilder: (BuildContext context, List<Reaction> reactions) {
-        return ListView.separated(
-            scrollDirection: Axis.vertical,
-            separatorBuilder: (context, index) => const Divider(),
-            shrinkWrap: true,
-            reverse: true,
-            itemCount: reactions.length,
-            itemBuilder: (context, index) => FrameComment(
-                key: ValueKey('reaction-${reactions[index].id}'),
-                lookupValue: lookupValue,
-                lookupAttr: lookupAttr,
-                reaction: reactions[index],
-                activity: activity,
-                username: reactions[index].user!.data!['full_name']
-                    as String, //"Gordon Hayes",
-                avatarUrl: reactions[index].user!.data!['profile_image']
-                        as String? ??
-                    "https://i.pravatar.cc/300", //"https://i.pravatar.cc/300"
-                timestamp: reactions[index].data!["timestamp"] as int?, //12
-                text: reactions[index].data!["text"]
-                    as String, // "Need to fix weird animation thing here"
-                date: reactions[index].createdAt!, // DateTime(2022, 04, 02),
-                numberOfComments: reactions[index].childrenCounts?['comment'],
-                isLikedByUser:
-                    (reactions[index].ownChildren?['like']?.length ?? 0) > 0,
-                numberOfLikes: reactions[index].childrenCounts?['like'],
-                onSeekTo: _chewieController != null
-                    ? (int timestamp) {
-                        _chewieController?.seekTo(Duration(seconds: timestamp));
-                      }
-                    : null));
+        return CommentListView(
+            lookupValue: lookupValue,
+            chewieController: _chewieController,
+            reactions: reactions);
       },
     );
   }
 }
 
-class FrameComment extends StatefulWidget {
-  const FrameComment({
+class CommentListView extends StatelessWidget {
+  const CommentListView({
     Key? key,
-    required this.timestamp,
-    required this.text,
-    required this.date,
-    required this.username,
-    required this.onSeekTo,
-    required this.avatarUrl,
-    required this.reaction,
-    required this.activity,
     required this.lookupValue,
-    required this.lookupAttr,
-    required this.numberOfLikes,
-    required this.isLikedByUser,
-    required this.numberOfComments,
-  }) : super(key: key);
-  final LookupAttribute lookupAttr;
-  final Reaction reaction;
-  final EnrichedActivity activity;
+    required this.reactions,
+    required ChewieController? chewieController,
+  })  : _chewieController = chewieController,
+        super(key: key);
+
+  final String lookupValue;
+  final List<Reaction> reactions;
+  final ChewieController? _chewieController;
+
+  @override
+  Widget build(BuildContext context) {
+    return ListView.separated(
+        scrollDirection: Axis.vertical,
+        separatorBuilder: (context, index) => const Divider(),
+        shrinkWrap: true,
+        reverse: true,
+        itemCount: reactions.length,
+        itemBuilder: (context, index) => FrameComment(
+              commentModel:
+                  FrameCommentModel.fromReaction(reactions[index], lookupValue),
+              buildReplies: (context) {
+                return Row(
+                  children: [
+                    const SizedBox(
+                      width: 40,
+                    ),
+                    Expanded(
+                      child: CommentListViewBuilder(
+                        lookupAttr: LookupAttribute.reactionId,
+                        lookupValue: reactions[index].id!,
+                      ),
+                    ),
+                  ],
+                );
+              },
+              onToggleLikeReaction: (isLikedByUser) async {
+                if (isLikedByUser) {
+                  FeedProvider.of(context).bloc.onRemoveChildReaction(
+                        kind: 'like',
+                        lookupValue: lookupValue,
+                        childReaction:
+                            reactions[index].ownChildren!['like']![0],
+                        parentReaction: reactions[index],
+                      );
+                } else {
+                  FeedProvider.of(context).bloc.onAddChildReaction(
+                        kind: 'like',
+                        lookupValue: lookupValue,
+                        reaction: reactions[index],
+                      );
+                }
+              },
+              onSeekTo: _chewieController != null
+                  ? (int timestamp) async {
+                      await _chewieController
+                          ?.seekTo(Duration(seconds: timestamp));
+                    }
+                  : null,
+              onReply: (reply) async {
+                await FeedProvider.of(context).bloc.onAddChildReaction(
+                  kind: "comment",
+                  reaction: reactions[index],
+                  lookupValue: lookupValue,
+                  data: {"text": reply},
+                );
+              },
+            ));
+  }
+}
+
+class FrameCommentModel {
   final int? timestamp;
   final DateTime date;
   final String text;
@@ -635,7 +686,59 @@ class FrameComment extends StatefulWidget {
   final int? numberOfComments;
   final String lookupValue;
   final bool isLikedByUser;
-  final void Function(int timestamp)? onSeekTo;
+  const FrameCommentModel({
+    this.timestamp,
+    required this.date,
+    required this.text,
+    required this.username,
+    required this.avatarUrl,
+    this.numberOfLikes,
+    this.numberOfComments,
+    required this.lookupValue,
+    required this.isLikedByUser,
+  });
+
+  factory FrameCommentModel.fromReaction(
+      Reaction reaction, String lookupValue) {
+    final username =
+        reaction.user!.data!['full_name'] as String; //"Gordon Hayes",
+    final avatarUrl = reaction.user!.data!['profile_image'] as String? ??
+        "https://i.pravatar.cc/300"; //"https://i.pravatar.cc/300"
+    final timestamp = reaction.data!["timestamp"] as int?; //12
+    final text = reaction.data!["text"]
+        as String; // "Need to fix weird animation thing here"
+    final date = reaction.createdAt!; // DateTime(2022, 04, 02),
+    final numberOfComments = reaction.childrenCounts?['comment'];
+    final isLikedByUser = (reaction.ownChildren?['like']?.length ?? 0) > 0;
+    final numberOfLikes = reaction.childrenCounts?['like'];
+    return FrameCommentModel(
+      date: date,
+      text: text,
+      username: username,
+      avatarUrl: avatarUrl,
+      lookupValue: lookupValue,
+      isLikedByUser: isLikedByUser,
+      numberOfComments: numberOfComments,
+      numberOfLikes: numberOfLikes,
+      timestamp: timestamp,
+    );
+  }
+}
+
+class FrameComment extends StatefulWidget {
+  const FrameComment({
+    Key? key,
+    required this.onSeekTo,
+    required this.onReply,
+    required this.onToggleLikeReaction,
+    required this.buildReplies,
+    required this.commentModel,
+  }) : super(key: key);
+  final FrameCommentModel commentModel;
+  final Future<void> Function(int timestamp)? onSeekTo;
+  final Future<void> Function(String reply) onReply;
+  final Future<void> Function(bool isLikedByUser) onToggleLikeReaction;
+  final Widget Function(BuildContext) buildReplies;
 
   @override
   State<FrameComment> createState() => _FrameCommentState();
@@ -655,18 +758,18 @@ class _FrameCommentState extends State<FrameComment> {
           child: Row(
             mainAxisAlignment: MainAxisAlignment.start,
             children: [
-              FrameAvatar(url: widget.avatarUrl),
+              FrameAvatar(url: widget.commentModel.avatarUrl),
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 8.0),
                 child: Text(
-                  widget.username,
+                  widget.commentModel.username,
                   style: const TextStyle(fontWeight: FontWeight.bold),
                 ),
               ),
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 8.0),
                 child: Text(
-                  formatPublishedDate(widget.date),
+                  formatPublishedDate(widget.commentModel.date),
                 ),
               ),
             ],
@@ -681,9 +784,9 @@ class _FrameCommentState extends State<FrameComment> {
                       padding: const EdgeInsets.symmetric(
                           horizontal: 8.0, vertical: 12.0),
                       child: Text(
-                        widget.timestamp != null
-                            ? convertDuration(
-                                Duration(seconds: widget.timestamp!))
+                        widget.commentModel.timestamp != null
+                            ? convertDuration(Duration(
+                                seconds: widget.commentModel.timestamp!))
                             : "",
                         style: const TextStyle(
                           color: Colors.blue,
@@ -693,40 +796,29 @@ class _FrameCommentState extends State<FrameComment> {
                       ),
                     ),
                     onTap: () {
-                      widget.onSeekTo!(widget.timestamp!);
+                      widget.onSeekTo!(widget.commentModel.timestamp!);
                     },
                   )
                 : const SizedBox(width: 45),
-            Text(widget.text),
+            Text(widget.commentModel.text),
           ],
         ),
         Row(
           mainAxisAlignment: MainAxisAlignment.start,
           children: [
             IconButton(
-              icon: widget.isLikedByUser
+              icon: widget.commentModel.isLikedByUser
                   ? const Icon(Icons.thumb_up, size: 14)
                   : const Icon(Icons.thumb_up_outlined, size: 14),
-              onPressed: () {
-                if (widget.isLikedByUser) {
-                  FeedProvider.of(context).bloc.onRemoveChildReaction(
-                        kind: 'like',
-                        lookupValue: widget.lookupValue,
-                        childReaction: widget.reaction.ownChildren!['like']![0],
-                        parentReaction: widget.reaction,
-                      );
-                } else {
-                  FeedProvider.of(context).bloc.onAddChildReaction(
-                        kind: 'like',
-                        lookupValue: widget.lookupValue,
-                        reaction: widget.reaction,
-                      );
-                }
+              onPressed: () async {
+                await widget
+                    .onToggleLikeReaction(widget.commentModel.isLikedByUser);
               },
             ),
-            if (widget.numberOfLikes != null && widget.numberOfLikes! > 0)
+            if (widget.commentModel.numberOfLikes != null &&
+                widget.commentModel.numberOfLikes! > 0)
               Text(
-                widget.numberOfLikes!.toString(),
+                widget.commentModel.numberOfLikes!.toString(),
                 style: const TextStyle(fontSize: 14),
               ),
             TextButton(
@@ -752,23 +844,17 @@ class _FrameCommentState extends State<FrameComment> {
                   size: 12,
                 ),
                 onPressed: () async {
-                  await FeedProvider.of(context).bloc.onAddChildReaction(
-                    kind: "comment",
-                    reaction: widget.reaction,
-                    lookupValue: widget.lookupValue,
-                    data: {
-                      "text": replyController.text,
-                    },
-                  );
+                  await widget.onReply(replyController.text);
                   replyController.clear();
                 },
               )
           ],
         ),
-        if (widget.numberOfComments != null && widget.numberOfComments! > 0)
+        if (widget.commentModel.numberOfComments != null &&
+            widget.commentModel.numberOfComments! > 0)
           TextButton(
             child: Text(
-              "${displayReplies ? 'Hide' : 'View'} ${widget.numberOfComments!} replies",
+              "${displayReplies ? 'Hide' : 'View'} ${widget.commentModel.numberOfComments!} replies",
               style: const TextStyle(color: Colors.blue),
             ),
             onPressed: () {
@@ -777,23 +863,7 @@ class _FrameCommentState extends State<FrameComment> {
               });
             },
           ),
-        if (displayReplies)
-          Row(
-            // mainAxisAlignment: MainAxisAlignment.end,
-            children: [
-              const SizedBox(
-                width: 40,
-              ),
-              Expanded(
-                child: CommentListView(
-                  key: Key("${widget.reaction.id}_comments"),
-                  activity: widget.activity,
-                  lookupAttr: LookupAttribute.reactionId,
-                  lookupValue: widget.reaction.id!,
-                ),
-              ),
-            ],
-          ),
+        if (displayReplies) widget.buildReplies(context),
       ],
     );
   }
