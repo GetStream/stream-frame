@@ -455,7 +455,10 @@ class _ReviewProjectState extends State<ReviewProject> {
           // Spacer(),
           Padding(
             padding: const EdgeInsets.all(8.0),
-            child: CommentSectionCard(activity: widget.activity),
+            child: CommentSectionCard(
+              activity: widget.activity,
+              videoPlayerController: _videoPlayerController1,
+            ),
           ),
         ],
       ),
@@ -464,9 +467,11 @@ class _ReviewProjectState extends State<ReviewProject> {
 }
 
 class CommentSectionCard extends StatelessWidget {
-  const CommentSectionCard({Key? key, required this.activity})
+  const CommentSectionCard(
+      {Key? key, required this.activity, required this.videoPlayerController})
       : super(key: key);
   final EnrichedActivity activity;
+  final VideoPlayerController videoPlayerController;
 
   @override
   Widget build(BuildContext context) {
@@ -491,6 +496,9 @@ class CommentSectionCard extends StatelessWidget {
                   padding: const EdgeInsets.all(8.0),
                   child: TextField(
                       controller: textController,
+                      onTap: () {
+                        videoPlayerController.pause();
+                      },
                       decoration: InputDecoration.collapsed(
                         hintText: "Leave your comment here",
                       )),
@@ -503,32 +511,19 @@ class CommentSectionCard extends StatelessWidget {
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Padding(
-                  padding: const EdgeInsets.all(8.0),
-                  child: Row(
-                    children: [
-                      Icon(Icons.timer),
-                      SizedBox(
-                        width: 12,
-                      ),
-                      //TODO: update this value continuously (in a performant way) from
-                      // _chewieController!.videoPlayerController.value.position
-                      //save it in a field so it's usable by as timestamp param for
-                      //onAddReaction
-                      Text(convertDuration(Duration(seconds: 2))),
-                    ],
-                  ),
-                ),
+                VideoPositionIndicator(videoPlayerController),
                 Container(
                   child: TextButton(
                     child: Text("Send"),
-                    onPressed: () {
-                      FeedProvider.of(context).bloc.onAddReaction(
+                    onPressed: () async {
+                      final timestamp = await videoPlayerController.position;
+                      await FeedProvider.of(context).bloc.onAddReaction(
                         kind: "comment",
                         activity: activity,
                         feedGroup: 'video_timeline',
                         data: {
-                          "timestamp": 12, //TODO: unhardcode this
+                          "timestamp":
+                              timestamp != null ? timestamp.inSeconds : 0,
                           "text": textController.text, //_
                         },
                       );
@@ -942,7 +937,7 @@ class _VideoPreviewState extends State<VideoPreview> {
   Widget build(BuildContext context) {
     return Card(
       semanticContainer: true,
-      clipBehavior: Clip.antiAliasWithSaveLayer,
+      clipBehavior: Clip.antiAlias,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(5),
       ),
@@ -969,6 +964,71 @@ class _VideoPreviewState extends State<VideoPreview> {
       videoPlayerController: _videoPlayerController,
       autoPlay: true,
       looping: true,
+    );
+  }
+}
+
+class VideoPositionIndicator extends StatefulWidget {
+  const VideoPositionIndicator(
+    this.controller, {
+    Key? key,
+  }) : super(key: key);
+
+  final VideoPlayerController controller;
+
+  @override
+  _VideoPositionIndicatorState createState() => _VideoPositionIndicatorState();
+}
+
+class _VideoPositionIndicatorState extends State<VideoPositionIndicator> {
+  _VideoPositionIndicatorState() {
+    listener = () {
+      if (!mounted) {
+        return;
+      }
+      setState(() {});
+    };
+  }
+
+  late VoidCallback listener;
+
+  VideoPlayerController get controller => widget.controller;
+
+  @override
+  void initState() {
+    super.initState();
+    controller.addListener(listener);
+  }
+
+  @override
+  void deactivate() {
+    controller.removeListener(listener);
+    super.deactivate();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (controller.value.isInitialized) {
+      final Duration position = controller.value.position;
+
+      return Row(
+        children: [
+          Icon(Icons.timer),
+          SizedBox(
+            width: 12,
+          ),
+          Text(convertDuration(position)),
+        ],
+      );
+    }
+    return Row(
+      children: [
+        Icon(Icons.timer),
+        SizedBox(
+          width: 12,
+        ),
+        Text(convertDuration(Duration(seconds: 0))),
+      ],
     );
   }
 }
