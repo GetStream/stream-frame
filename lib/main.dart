@@ -178,7 +178,6 @@ class NewProjectDialog extends StatelessWidget {
               },
               object: "video");
           Navigator.of(context).popUntil((route) => route.isFirst);
-          Navigator.of(context).popUntil((route) => route.isFirst);
         },
       )
     ]);
@@ -713,18 +712,14 @@ class _FrameCommentState extends State<FrameComment> {
                   FeedProvider.of(context).bloc.onRemoveChildReaction(
                         kind: 'like',
                         lookupValue: widget.lookupValue,
-                        lookupAttr: widget.lookupAttr,
                         childReaction: widget.reaction.ownChildren!['like']![0],
-                        activity: widget.activity,
                         parentReaction: widget.reaction,
                       );
                 } else {
                   FeedProvider.of(context).bloc.onAddChildReaction(
                         kind: 'like',
                         lookupValue: widget.lookupValue,
-                        lookupAttr: widget.lookupAttr,
                         reaction: widget.reaction,
-                        activity: widget.activity,
                       );
                 }
               },
@@ -760,8 +755,6 @@ class _FrameCommentState extends State<FrameComment> {
                   await FeedProvider.of(context).bloc.onAddChildReaction(
                     kind: "comment",
                     reaction: widget.reaction,
-                    activity: widget.activity,
-                    lookupAttr: widget.lookupAttr,
                     lookupValue: widget.lookupValue,
                     data: {
                       "text": replyController.text,
