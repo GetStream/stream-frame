@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:stream_frame/models.dart';
 import 'package:stream_frame/review_project_page.dart';
 
+
+/// A card to preview the project name, author, the number of comments
 class ProjectPreviewCard extends StatelessWidget {
   final ReviewProjectModel reviewModel;
   const ProjectPreviewCard({Key? key, required this.reviewModel}) : super(key: key);

@@ -1,4 +1,3 @@
-
 import 'package:chewie/chewie.dart';
 import 'package:flutter/material.dart';
 import 'package:stream_feed_flutter_core/stream_feed_flutter_core.dart';
@@ -9,6 +8,8 @@ import 'package:stream_frame/utils.dart';
 import 'package:stream_frame/video.dart';
 import 'package:video_player/video_player.dart';
 
+/// The bottom card in the [ReviewProjectPage] to leave a commenr at a certain
+/// timestamp
 class CommentSectionCard extends StatelessWidget {
   const CommentSectionCard({
     Key? key,
@@ -73,8 +74,7 @@ class CommentSectionCard extends StatelessWidget {
   }
 }
 
-
-
+/// A ListView of [FrameComment]s
 class CommentListView extends StatelessWidget {
   const CommentListView({
     Key? key,
@@ -149,6 +149,8 @@ class CommentListView extends StatelessWidget {
   }
 }
 
+/// The widget that handle youtube style comments, with a seekTo callback to seek 
+/// the video to the timestamp of the comment
 class FrameComment extends StatefulWidget {
   const FrameComment({
     Key? key,
@@ -159,9 +161,17 @@ class FrameComment extends StatefulWidget {
     required this.commentModel,
   }) : super(key: key);
   final FrameCommentModel commentModel;
+
+  /// The callback to seek the video to the timestamp of the comment
   final Future<void> Function(int timestamp)? onSeekTo;
+
+  /// The callback to reply to the comment
   final Future<void> Function(String reply) onReply;
+
+  /// The callback to toggle the like reaction
   final Future<void> Function(bool isLikedByUser) onToggleLikeReaction;
+
+  /// Build the replies to the comment
   final Widget Function(BuildContext) buildReplies;
 
   @override
@@ -293,6 +303,7 @@ class _FrameCommentState extends State<FrameComment> {
   }
 }
 
+/// A sized text field to reply to a comment
 class ReplyTextField extends StatelessWidget {
   const ReplyTextField({Key? key, required this.replyController})
       : super(key: key);
@@ -307,4 +318,3 @@ class ReplyTextField extends StatelessWidget {
         ));
   }
 }
-

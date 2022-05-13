@@ -3,6 +3,9 @@ import 'package:stream_feed_flutter_core/stream_feed_flutter_core.dart';
 import 'package:stream_frame/upload_file_picker.dart';
 import 'package:stream_frame/video.dart';
 
+
+/// A Dialog to create a new activity i.e. a video project
+/// display the video preview once video is picked
 class NewProjectDialog extends StatelessWidget {
   const NewProjectDialog({Key? key}) : super(key: key);
 
@@ -28,7 +31,7 @@ class NewProjectDialog extends StatelessWidget {
               hintText: "Enter Project Description",
             )),
       ),
-      const UploadFilePicker(),
+      const UploadVideoPicker(),
       SizedBox(
         width: double.maxFinite,
         child: UploadListCore(

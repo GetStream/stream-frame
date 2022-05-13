@@ -1,6 +1,9 @@
 
 import 'package:stream_feed_flutter_core/stream_feed_flutter_core.dart';
 
+
+/// A model to represent a comment body
+/// it's used in [CommentListView], [FrameAvatar] and [FrameComment]
 class FrameCommentModel {
   final int? timestamp;
   final DateTime date;
@@ -50,7 +53,8 @@ class FrameCommentModel {
   }
 }
 
-
+/// A model to represent a review project
+/// it's used [ProjectPreviewBuilder], [ReviewProjectPage]
 class ReviewProjectModel {
   final EnrichedActivity activity;
   final int reactionCounts;

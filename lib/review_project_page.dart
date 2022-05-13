@@ -7,6 +7,7 @@ import 'package:stream_frame/models.dart';
 import 'package:stream_frame/utils.dart';
 import 'package:video_player/video_player.dart';
 
+/// A page that displays a video and its review comments.
 class ReviewProjectPage extends StatefulWidget {
   const ReviewProjectPage({
     Key? key,
@@ -61,7 +62,9 @@ class _ReviewProjectPageState extends State<ReviewProjectPage> {
               child: _chewieController != null &&
                       _chewieController!
                           .videoPlayerController.value.isInitialized
-                  ? Chewie(
+                  ? 
+                  //The video player
+                  Chewie(
                       controller: _chewieController!,
                     )
                   : Column(

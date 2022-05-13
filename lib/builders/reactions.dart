@@ -4,12 +4,12 @@ import 'package:stream_feed_flutter_core/stream_feed_flutter_core.dart';
 import 'package:stream_frame/comments.dart';
 
 class CommentListViewBuilder extends StatelessWidget {
-  const CommentListViewBuilder(
-      {Key? key,
-      ChewieController? chewieController,
-      required this.lookupValue,
-      this.lookupAttr = LookupAttribute.activityId})
-      : _chewieController = chewieController,
+  const CommentListViewBuilder({
+    Key? key,
+    ChewieController? chewieController,
+    required this.lookupValue,
+    this.lookupAttr = LookupAttribute.activityId,
+  })  : _chewieController = chewieController,
         super(key: key);
   final ChewieController? _chewieController;
   final LookupAttribute lookupAttr;

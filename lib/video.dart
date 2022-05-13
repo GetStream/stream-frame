@@ -7,6 +7,7 @@ import 'package:stream_frame/utils.dart';
 import 'package:chewie/chewie.dart';
 import 'package:video_player/video_player.dart';
 
+/// A widget to display the current video position
 class VideoPositionIndicator extends StatefulWidget {
   const VideoPositionIndicator(
     this.controller, {
@@ -72,6 +73,7 @@ class _VideoPositionIndicatorState extends State<VideoPositionIndicator> {
   }
 }
 
+/// A card used in the [NewProjectDialog] widget to display the video preview
 
 class VideoPreviewCard extends StatefulWidget {
   const VideoPreviewCard(this.file, {Key? key}) : super(key: key);
