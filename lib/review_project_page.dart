@@ -62,7 +62,7 @@ class _ReviewProjectPageState extends State<ReviewProjectPage> {
               child: _chewieController != null &&
                       _chewieController!
                           .videoPlayerController.value.isInitialized
-                  ? 
+                  ?
                   //The video player
                   Chewie(
                       controller: _chewieController!,

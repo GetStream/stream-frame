@@ -149,7 +149,7 @@ class CommentListView extends StatelessWidget {
   }
 }
 
-/// The widget that handle youtube style comments, with a seekTo callback to seek 
+/// The widget that handle YouTube style comments, with a seekTo callback to seek
 /// the video to the timestamp of the comment
 class FrameComment extends StatefulWidget {
   const FrameComment({

@@ -3,8 +3,6 @@ import 'package:stream_feed_flutter_core/stream_feed_flutter_core.dart';
 import 'package:stream_frame/app.dart';
 import 'package:stream_frame/projects_page.dart';
 
-
-
 Future<void> main() async {
   const apiKey = String.fromEnvironment('api_key');
   const userToken = String.fromEnvironment('user_token');
@@ -24,11 +22,10 @@ Future<void> main() async {
     const Token(userToken),
   );
 
-  //     time: DateTime.now()));
   runApp(
     StreamFrameApp(
       client: client,
-      home:const ProjectsPage()
+      home: const ProjectsPage(),
     ),
   );
 }

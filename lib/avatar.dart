@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-/// a NetworkImage CircleAvatar
+/// A NetworkImage CircleAvatar
 class FrameAvatar extends StatelessWidget {
   const FrameAvatar({
     Key? key,
