@@ -77,7 +77,8 @@ class NewProjectDialog extends StatelessWidget {
                 "project_name": projectNameController.text,
                 "video_url": videoUrl,
               },
-              object: "video");
+              object: "video",
+              time: DateTime.now());
           Navigator.of(context).popUntil((route) => route.isFirst);
         },
       )
