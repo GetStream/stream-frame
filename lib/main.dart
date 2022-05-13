@@ -38,7 +38,7 @@ class _StreamFrameState extends State<StreamFrame> {
         theme: AppTheme.light.copyWith(
           platform: _platform ?? Theme.of(context).platform,
         ),
-        home: Projects());
+        home: const Projects());
     return materialApp;
   }
 }
@@ -53,11 +53,11 @@ class Projects extends StatelessWidget {
           onPressed: () {
             Navigator.of(context).restorablePush(_dialogBuilder);
           },
-          child: Icon(
+          child: const Icon(
             Icons.add,
           )),
       appBar: AppBar(
-        title: Text(
+        title: const Text(
           "Stream Frame",
         ),
       ),
@@ -95,7 +95,7 @@ class Projects extends StatelessWidget {
       BuildContext context, Object? arguments) {
     return DialogRoute<void>(
       context: context,
-      builder: (BuildContext context) => NewProjectDialog(),
+      builder: (BuildContext context) => const NewProjectDialog(),
     );
   }
 }
@@ -108,25 +108,25 @@ class NewProjectDialog extends StatelessWidget {
     final projectNameController = TextEditingController();
     final projectDescController = TextEditingController();
     final uploadController = FeedProvider.of(context).bloc.uploadController;
-    return SimpleDialog(title: Text('New project'), children: [
+    return SimpleDialog(title: const Text('New project'), children: [
       Padding(
-        padding: EdgeInsets.all(8.0),
+        padding: const EdgeInsets.all(8.0),
         child: TextField(
             controller: projectNameController,
-            decoration: InputDecoration.collapsed(
+            decoration: const InputDecoration.collapsed(
               hintText: "Enter Project Name",
             )),
       ),
       Padding(
-        padding: EdgeInsets.all(8.0),
+        padding: const EdgeInsets.all(8.0),
         child: TextField(
             controller: projectDescController,
-            decoration: InputDecoration.collapsed(
+            decoration: const InputDecoration.collapsed(
               hintText: "Enter Project Description",
             )),
       ),
-      UploadFileButton(),
-      Container(
+      const UploadFileButton(),
+      SizedBox(
         width: double.maxFinite,
         child: UploadListCore(
           uploadController: uploadController,
@@ -156,25 +156,25 @@ class NewProjectDialog extends StatelessWidget {
                           return uploadController.uploadImage(attachment);
                         }),
                   )
-                : SizedBox.shrink();
+                : const SizedBox.shrink();
           },
         ),
       ),
       TextButton(
-        child: Text("Create"),
+        child: const Text("Create"),
         onPressed: () async {
           print("Creating project");
           final client = FeedProvider.of(context).bloc.client;
-          final video_url =
+          final videoUrl =
               uploadController.getMediaUris()!.first.uri.toString();
-          print("video_url $video_url");
+          print("video_url $videoUrl");
           await FeedProvider.of(context).bloc.onAddActivity(
               feedGroup: 'video_timeline',
               verb: "add",
               data: {
                 "description": projectDescController.text,
                 "project_name": projectNameController.text,
-                "video_url": video_url,
+                "video_url": videoUrl,
               },
               object: "video");
           Navigator.of(context).popUntil((route) => route.isFirst);
@@ -231,7 +231,7 @@ class ProjectPreview extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final projectName = activity.extraData!["project_name"] as String;
-    final commentNumber = activity.reactionCounts?["comment"] as int? ?? 0;
+    final commentNumber = activity.reactionCounts?["comment"] ?? 0;
     final authorName = activity.actor!.data!["full_name"] as String;
     final publishedDate = activity.time!; //. DateTime(2022, 05, 02);
     return Card(
@@ -261,7 +261,7 @@ class ProjectPreview extends StatelessWidget {
             ),
             Text(
               projectName,
-              style: TextStyle(fontWeight: FontWeight.bold),
+              style: const TextStyle(fontWeight: FontWeight.bold),
             ),
 
             Row(
@@ -274,7 +274,7 @@ class ProjectPreview extends StatelessWidget {
                   padding: const EdgeInsets.symmetric(vertical: 2.0),
                   child: Row(
                     children: [
-                      Icon(
+                      const Icon(
                         Icons.comment_rounded,
                         size: 14,
                       ),
@@ -296,7 +296,7 @@ class ProjectPreview extends StatelessWidget {
         borderRadius: BorderRadius.circular(10.0),
       ),
       elevation: 5,
-      margin: EdgeInsets.all(10),
+      margin: const EdgeInsets.all(10),
     );
   }
 }
@@ -417,17 +417,17 @@ class _ReviewProjectState extends State<ReviewProject> {
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 16),
             child: Text(widget.projectName,
-                style: TextStyle(fontWeight: FontWeight.bold)),
+                style: const TextStyle(fontWeight: FontWeight.bold)),
           ),
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 8.0),
             child: Row(
               children: [
                 Text(widget.authorName,
-                    style: TextStyle(
+                    style: const TextStyle(
                         color: Colors.grey, fontWeight: FontWeight.bold)),
                 Text(" uploaded ${formatPublishedDate(widget.publishedDate)}",
-                    style: TextStyle(
+                    style: const TextStyle(
                         color: Colors.grey, fontWeight: FontWeight.bold))
               ],
             ),
@@ -436,7 +436,7 @@ class _ReviewProjectState extends State<ReviewProject> {
             padding: const EdgeInsets.symmetric(horizontal: 8.0),
             child: Text(
               widget.description,
-              style: TextStyle(color: Colors.grey),
+              style: const TextStyle(color: Colors.grey),
             ),
           ),
           Padding(
@@ -498,7 +498,7 @@ class CommentSectionCard extends StatelessWidget {
                       onTap: () {
                         videoPlayerController.pause();
                       },
-                      decoration: InputDecoration.collapsed(
+                      decoration: const InputDecoration.collapsed(
                         hintText: "Leave your comment here",
                       )),
                 ),
@@ -513,7 +513,7 @@ class CommentSectionCard extends StatelessWidget {
                 VideoPositionIndicator(videoPlayerController),
                 Container(
                   child: TextButton(
-                    child: Text("Send"),
+                    child: const Text("Send"),
                     onPressed: () async {
                       final timestamp = await videoPlayerController.position;
                       await FeedProvider.of(context).bloc.onAddReaction(
@@ -566,7 +566,7 @@ class CommentListView extends StatelessWidget {
       loadingBuilder: (context) => const Center(
         child: CircularProgressIndicator(),
       ),
-      emptyBuilder: (context) => Offstage(),
+      emptyBuilder: (context) => const Offstage(),
       errorBuilder: (context, error) => Center(
         child: Text(error.toString()),
       ),
@@ -660,7 +660,7 @@ class _FrameCommentState extends State<FrameComment> {
                 padding: const EdgeInsets.symmetric(horizontal: 8.0),
                 child: Text(
                   widget.username,
-                  style: TextStyle(fontWeight: FontWeight.bold),
+                  style: const TextStyle(fontWeight: FontWeight.bold),
                 ),
               ),
               Padding(
@@ -685,7 +685,7 @@ class _FrameCommentState extends State<FrameComment> {
                             ? convertDuration(
                                 Duration(seconds: widget.timestamp!))
                             : "",
-                        style: TextStyle(
+                        style: const TextStyle(
                           color: Colors.blue,
                           fontWeight: FontWeight.bold,
                           fontSize: 13,
@@ -696,7 +696,7 @@ class _FrameCommentState extends State<FrameComment> {
                       widget.onSeekTo!(widget.timestamp!);
                     },
                   )
-                : SizedBox(width: 45),
+                : const SizedBox(width: 45),
             Text(widget.text),
           ],
         ),
@@ -727,10 +727,10 @@ class _FrameCommentState extends State<FrameComment> {
             if (widget.numberOfLikes != null && widget.numberOfLikes! > 0)
               Text(
                 widget.numberOfLikes!.toString(),
-                style: TextStyle(fontSize: 14),
+                style: const TextStyle(fontSize: 14),
               ),
             TextButton(
-              child: Text(
+              child: const Text(
                 "Reply",
                 style: TextStyle(fontSize: 14),
               ),
@@ -747,7 +747,7 @@ class _FrameCommentState extends State<FrameComment> {
               ),
             if (showTextField)
               IconButton(
-                icon: Icon(
+                icon: const Icon(
                   Icons.send,
                   size: 12,
                 ),
@@ -769,7 +769,7 @@ class _FrameCommentState extends State<FrameComment> {
           TextButton(
             child: Text(
               "${displayReplies ? 'Hide' : 'View'} ${widget.numberOfComments!} replies",
-              style: TextStyle(color: Colors.blue),
+              style: const TextStyle(color: Colors.blue),
             ),
             onPressed: () {
               setState(() {
@@ -781,7 +781,7 @@ class _FrameCommentState extends State<FrameComment> {
           Row(
             // mainAxisAlignment: MainAxisAlignment.end,
             children: [
-              SizedBox(
+              const SizedBox(
                 width: 40,
               ),
               Expanded(
@@ -866,7 +866,7 @@ Future<void> main() async {
     ),
     const Token(userToken),
   );
-  final feedGroup =
+  const feedGroup =
       'video_timeline'; //or maybe we could call this something more meaningful like video_feed
   // client.flatFeed('video_timeline').addActivity(Activity(
   //     verb: "add",
@@ -1006,8 +1006,8 @@ class _VideoPositionIndicatorState extends State<VideoPositionIndicator> {
 
       return Row(
         children: [
-          Icon(Icons.timer),
-          SizedBox(
+          const Icon(Icons.timer),
+          const SizedBox(
             width: 12,
           ),
           Text(convertDuration(position)),
@@ -1016,11 +1016,11 @@ class _VideoPositionIndicatorState extends State<VideoPositionIndicator> {
     }
     return Row(
       children: [
-        Icon(Icons.timer),
-        SizedBox(
+        const Icon(Icons.timer),
+        const SizedBox(
           width: 12,
         ),
-        Text(convertDuration(Duration(seconds: 0))),
+        Text(convertDuration(const Duration(seconds: 0))),
       ],
     );
   }
