@@ -149,7 +149,154 @@ class CommentListView extends StatelessWidget {
   }
 }
 
-/// The widget that handle youtube style comments, with a seekTo callback to seek 
+class CommentHeader extends StatelessWidget {
+  const CommentHeader({Key? key, required this.commentModel}) : super(key: key);
+  final FrameCommentModel commentModel;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 8.0),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.start,
+        children: [
+          FrameAvatar(url: commentModel.avatarUrl),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 8.0),
+            child: Text(
+              commentModel.username,
+              style: const TextStyle(fontWeight: FontWeight.bold),
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 8.0),
+            child: Text(
+              formatPublishedDate(commentModel.date),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class CommentContent extends StatelessWidget {
+  const CommentContent({
+    Key? key,
+    this.onSeekTo,
+    required this.commentModel,
+  }) : super(key: key);
+  final Future<void> Function(int timestamp)? onSeekTo;
+  final FrameCommentModel commentModel;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.start,
+      children: [
+        onSeekTo != null
+            ? GestureDetector(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 8.0, vertical: 12.0),
+                  child: Text(
+                    commentModel.timestamp != null
+                        ? convertDuration(
+                            Duration(seconds: commentModel.timestamp!))
+                        : "",
+                    style: const TextStyle(
+                      color: Colors.blue,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 13,
+                    ),
+                  ),
+                ),
+                onTap: () {
+                  onSeekTo!(commentModel.timestamp!);
+                },
+              )
+            : const SizedBox(width: 45),
+        Text(commentModel.text),
+      ],
+    );
+  }
+}
+
+class CommentFooter extends StatefulWidget {
+  const CommentFooter({
+    Key? key,
+    required this.commentModel,
+    required this.onToggleLikeReaction,
+    required this.onReply,
+  }) : super(key: key);
+  final FrameCommentModel commentModel;
+
+  /// The callback to reply to the comment
+  final Future<void> Function(String reply) onReply;
+
+  /// The callback to toggle the like reaction
+  final Future<void> Function(bool isLikedByUser) onToggleLikeReaction;
+
+  @override
+  State<CommentFooter> createState() => _CommentFooterState();
+}
+
+class _CommentFooterState extends State<CommentFooter> {
+  bool showTextField = false;
+  final replyController = TextEditingController();
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.start,
+      children: [
+        IconButton(
+          icon: widget.commentModel.isLikedByUser
+              ? const Icon(Icons.thumb_up, size: 14)
+              : const Icon(Icons.thumb_up_outlined, size: 14),
+          onPressed: () async {
+            await widget
+                .onToggleLikeReaction(widget.commentModel.isLikedByUser);
+          },
+        ),
+        if (widget.commentModel.numberOfLikes != null &&
+            widget.commentModel.numberOfLikes! > 0)
+          Text(
+            widget.commentModel.numberOfLikes!.toString(),
+            style: const TextStyle(fontSize: 14),
+          ),
+        TextButton(
+          child: const Text(
+            "Reply",
+            style: TextStyle(fontSize: 14),
+          ),
+          onPressed: () {
+            setState(() {
+              showTextField = !showTextField;
+            });
+          },
+        ),
+        if (showTextField)
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 8.0),
+            child: ReplyTextField(replyController: replyController),
+          ),
+        if (showTextField)
+          IconButton(
+            icon: const Icon(
+              Icons.send,
+              size: 12,
+            ),
+            onPressed: () async {
+              await widget.onReply(replyController.text);
+              replyController.clear();
+            },
+          )
+      ],
+    );
+  }
+}
+
+/// The widget that handle youtube style comments, with a seekTo callback to seek
 /// the video to the timestamp of the comment
 class FrameComment extends StatefulWidget {
   const FrameComment({
@@ -187,102 +334,18 @@ class _FrameCommentState extends State<FrameComment> {
   Widget build(BuildContext context) {
     return Column(
       children: [
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 8.0),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.start,
-            children: [
-              FrameAvatar(url: widget.commentModel.avatarUrl),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 8.0),
-                child: Text(
-                  widget.commentModel.username,
-                  style: const TextStyle(fontWeight: FontWeight.bold),
-                ),
-              ),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 8.0),
-                child: Text(
-                  formatPublishedDate(widget.commentModel.date),
-                ),
-              ),
-            ],
-          ),
+        //Header
+        CommentHeader(commentModel: widget.commentModel),
+        //Content
+        CommentContent(
+          commentModel: widget.commentModel,
+          onSeekTo: widget.onSeekTo,
         ),
-        Row(
-          mainAxisAlignment: MainAxisAlignment.start,
-          children: [
-            widget.onSeekTo != null
-                ? GestureDetector(
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 8.0, vertical: 12.0),
-                      child: Text(
-                        widget.commentModel.timestamp != null
-                            ? convertDuration(Duration(
-                                seconds: widget.commentModel.timestamp!))
-                            : "",
-                        style: const TextStyle(
-                          color: Colors.blue,
-                          fontWeight: FontWeight.bold,
-                          fontSize: 13,
-                        ),
-                      ),
-                    ),
-                    onTap: () {
-                      widget.onSeekTo!(widget.commentModel.timestamp!);
-                    },
-                  )
-                : const SizedBox(width: 45),
-            Text(widget.commentModel.text),
-          ],
-        ),
-        Row(
-          mainAxisAlignment: MainAxisAlignment.start,
-          children: [
-            IconButton(
-              icon: widget.commentModel.isLikedByUser
-                  ? const Icon(Icons.thumb_up, size: 14)
-                  : const Icon(Icons.thumb_up_outlined, size: 14),
-              onPressed: () async {
-                await widget
-                    .onToggleLikeReaction(widget.commentModel.isLikedByUser);
-              },
-            ),
-            if (widget.commentModel.numberOfLikes != null &&
-                widget.commentModel.numberOfLikes! > 0)
-              Text(
-                widget.commentModel.numberOfLikes!.toString(),
-                style: const TextStyle(fontSize: 14),
-              ),
-            TextButton(
-              child: const Text(
-                "Reply",
-                style: TextStyle(fontSize: 14),
-              ),
-              onPressed: () {
-                setState(() {
-                  showTextField = !showTextField;
-                });
-              },
-            ),
-            if (showTextField)
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 8.0),
-                child: ReplyTextField(replyController: replyController),
-              ),
-            if (showTextField)
-              IconButton(
-                icon: const Icon(
-                  Icons.send,
-                  size: 12,
-                ),
-                onPressed: () async {
-                  await widget.onReply(replyController.text);
-                  replyController.clear();
-                },
-              )
-          ],
+        //Footer
+        CommentFooter(
+          commentModel: widget.commentModel,
+          onReply: widget.onReply,
+          onToggleLikeReaction: widget.onToggleLikeReaction,
         ),
         if (widget.commentModel.numberOfComments != null &&
             widget.commentModel.numberOfComments! > 0)
