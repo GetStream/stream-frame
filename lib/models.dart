@@ -1,6 +1,4 @@
-
 import 'package:stream_feed_flutter_core/stream_feed_flutter_core.dart';
-
 
 /// A model to represent a comment body
 /// it's used in [CommentListView], [FrameAvatar] and [FrameComment]
@@ -28,14 +26,12 @@ class FrameCommentModel {
 
   factory FrameCommentModel.fromReaction(
       Reaction reaction, String lookupValue) {
-    final username =
-        reaction.user!.data!['full_name'] as String; //"Gordon Hayes",
+    final username = reaction.user!.data!['full_name'] as String;
     final avatarUrl = reaction.user!.data!['profile_image'] as String? ??
-        "https://i.pravatar.cc/300"; //"https://i.pravatar.cc/300"
-    final timestamp = reaction.data!["timestamp"] as int?; //12
-    final text = reaction.data!["text"]
-        as String; // "Need to fix weird animation thing here"
-    final date = reaction.createdAt!; // DateTime(2022, 04, 02),
+        "https://i.pravatar.cc/300";
+    final timestamp = reaction.data!["timestamp"] as int?;
+    final text = reaction.data!["text"] as String;
+    final date = reaction.createdAt!;
     final numberOfComments = reaction.childrenCounts?['comment'];
     final isLikedByUser = (reaction.ownChildren?['like']?.length ?? 0) > 0;
     final numberOfLikes = reaction.childrenCounts?['like'];
@@ -63,6 +59,7 @@ class ReviewProjectModel {
   final DateTime publishedDate;
   final String description;
   final String videoUrl;
+
   ReviewProjectModel({
     required this.activity,
     required this.reactionCounts,
@@ -72,15 +69,14 @@ class ReviewProjectModel {
     required this.description,
     required this.videoUrl,
   });
+
   factory ReviewProjectModel.fromActivity(EnrichedActivity activity) {
     final projectName = activity.extraData!["project_name"] as String;
     final reactionCounts = activity.reactionCounts?["comment"] ?? 0;
     final authorName = activity.actor!.data!["full_name"] as String;
-    final publishedDate = activity.time!; //. DateTime(2022, 05, 02);
-    final videoUrl =
-        activity.extraData!['video_url'] as String; //"Gordon Hayes",
-    final description =
-        activity.extraData!["description"] as String; // "this is a descrption
+    final publishedDate = activity.time!;
+    final videoUrl = activity.extraData!['video_url'] as String;
+    final description = activity.extraData!["description"] as String;
     return ReviewProjectModel(
         activity: activity,
         authorName: authorName,

@@ -1,8 +1,6 @@
-
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:stream_feed_flutter_core/stream_feed_flutter_core.dart';
-
 
 /// A file picker that uploads a video to Stream CDN
 class UploadVideoPicker extends StatelessWidget {

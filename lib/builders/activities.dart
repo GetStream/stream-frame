@@ -1,4 +1,3 @@
-
 import 'package:flutter/material.dart';
 import 'package:stream_feed_flutter_core/stream_feed_flutter_core.dart';
 import 'package:stream_frame/models.dart';
