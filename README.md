@@ -20,7 +20,7 @@ Stream-frame is a demo application showing how to recreate Frame.io using <a hre
 If you'd like to learn more about this project and how the code is structured, take a look at the companion blog and video.
 
 ### Blog Post
-- Article detailing a step-by-step guide for this project.
+- [Article](https://getstream.io/blog/flutter-feeds-video-collaboration-platform/) detailing a step-by-step guide for this project.
 
 ## Previews
 
