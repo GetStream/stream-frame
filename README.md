@@ -54,7 +54,7 @@ You will also need to add your **Stream API-Key** and **User Frontend Tokens**. 
 <img src="https://user-images.githubusercontent.com/24237865/138428440-b92e5fb7-89f8-41aa-96b1-71a5486c5849.png" align="right" width="12%"/>
 
 ## Stream Feeds Flutter SDK
-Stream-agram is built with [Stream Feeds](https://getstream.io/activity-feeds/) for implementing activity feeds.
+Stream-frame is built with [Stream Feeds](https://getstream.io/activity-feeds/) for implementing activity feeds.
 - [Activity Feeds Tutorial](https://getstream.io/activity-feeds/sdk/flutter/tutorial/) - Basic tutorials for getting started with activity feeds.
 - [Stream Feeds Flutter Repository](https://github.com/GetStream/stream-feed-flutter) - Official Flutter SDK for Stream Feeds.
 - [Feed Client Documentation](https://getstream.io/activity-feeds/docs/flutter-dart/?language=dart) - Detailed documentation of the Activity Feeds client.
