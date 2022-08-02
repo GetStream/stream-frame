@@ -13,7 +13,7 @@ Stream-frame is a demo application showing how to recreate Frame.io using <a hre
 </br>
 
 <p align="center">
-<img src="/previews/preview.png" />
+<img src="https://user-images.githubusercontent.com/13705472/182393994-20142b5e-394b-4618-93c1-f53b2e53a120.jpg" />
 </p>
 
 ## Tutorials
